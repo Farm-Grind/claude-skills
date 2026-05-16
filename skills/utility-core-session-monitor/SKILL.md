@@ -26,28 +26,6 @@ threshold is crossed. Never narrate the monitoring process.
 
 ---
 
-## WHY THIS MATTERS — CONTEXT FOR CALIBRATION
-
-Claude's context window is working memory, not storage. As it fills:
-
-- Critical instructions and locked decisions get displaced toward the middle of
-  context, where recall degrades by 20%+ (Stanford "lost in the middle" research)
-- MCP tool schema overhead is passive and large — each connected server loads
-  its full catalog at session start, consuming tens of thousands of tokens
-  before any conversation begins
-- ALL tool responses accumulate and persist — every bash command, view call,
-  web search, image search, Notion fetch, Linear query, and Airtable write
-  returns data that stays in context for the rest of the session, compounding
-  with each turn
-- Drift is gradual and subtle — it often appears as softened answers,
-  re-asked questions, or quietly dropped constraints, not as an obvious error
-
-The goal is not to hit the hard limit — it is to hand off *before* quality
-degrades, while there is still enough context left to generate a complete,
-accurate handoff prompt.
-
----
-
 ## PART 1 — PASSIVE LOAD ESTIMATE
 
 Before turn-counting, estimate the passive token load from connected MCP
@@ -267,60 +245,16 @@ precedence over this skill's thresholds within a sprint session.
 
 ---
 
-## PART 3.5 — §5b SPRINT STATUS DISPLAY
+## PART 3.5 — §5b SPRINT MODE
 
-**Sprint detection:** A §5b sprint is "active" when the conversation context
-contains explicit signals of a skill creation or update session — skill file
-paths loaded, utility-core-skill-gate invoked, §5b referenced in the session
-preamble or user instruction, or a skill packaging task is underway. Infer from
-conversation context; do not require an explicit announcement.
+When a §5b skill sprint is detected (skill creation/update session — infer from
+context; do not require explicit announcement):
 
-MUST emit a brief status block at three checkpoints to give visibility into
-session capacity before tool-call overhead accumulates. Skipping any checkpoint
-is a hard fail — the sprint status blocks are the primary early warning for
-sprint sessions and must not be omitted under time pressure:
+**Load:** `references/sprint-mode.md`
 
-**Checkpoint 1 — Step 1 (sprint start):**
-MUST emit once, after loading skill files and before executing any edits:
-
-```
-⚙ SPRINT STATUS [step 1/10]
-Tool calls so far: [N] | Sprint threshold: 12 | Remaining: [12–N]
-Session turns: [N] | Position check gate: ≥ 10 turns OR ≥ 15 calls
-```
-
-**Checkpoint 2 — Step 5 (mid-sprint, post-Gate 8b):**
-MUST emit once, after Gate 8b adversarial review completes and before registry write.
-Conditional lines: evaluate the condition and emit only the quoted text when true — do
-not emit the `[If N ≥ X:` notation itself:
-
-```
-⚙ SPRINT STATUS [step 5/10]
-Tool calls so far: [N] | Sprint threshold: 12 | Remaining: [12–N]
-[If N ≥ 8: emit → ⚠ Approaching sprint WARNING threshold — proceed, but watch for gate failures]
-[If N ≥ 12: emit → 🔴 Sprint HANDOFF ALERT — stop here, handoff before registry write]
-```
-
-**Checkpoint 3 — Step 8 (post-packaging, pre-delivery):**
-MUST emit once, after .skill file is packaged and before present_files.
-Conditional line: evaluate condition and emit only the quoted text when true:
-
-```
-⚙ SPRINT STATUS [step 8/10]
-Tool calls so far: [N] | Sprint threshold: 12 | Remaining: [12–N]
-[If N ≥ 12: emit → 🔴 Session at capacity — deliver gate block and present_files only, then close out]
-```
-
-**Mini-example — Checkpoint 2 at 9 tool calls:**
-```
-⚙ SPRINT STATUS [step 5/10]
-Tool calls so far: 9 | Sprint threshold: 12 | Remaining: 3
-⚠ Approaching sprint WARNING threshold — proceed, but watch for gate failures
-```
-
-**Output rule:** Status blocks are brief and non-disruptive. They do not replace
-WARNING or HANDOFF ALERT — they are supplementary visibility for sprint sessions.
-If HANDOFF ALERT fires at any checkpoint, it takes precedence and the sprint stops.
+That file defines: threshold adjustments, mandatory checkpoint blocks at Steps 1,
+5, and 8, and the §5b WARNING/HANDOFF escalation sequence. All sprint-mode behavior
+is governed there.
 
 ---
 
@@ -488,130 +422,10 @@ current state.
 
 ## EXAMPLES
 
-**Example 1 — Normal work, state stays IN_SESSION**
-
-Session is 8 turns in. 2 MCP calls made. No drift signals. User asks a
-design question.
-
-State inference: no handoff delivered → check signal 2 → no session-end
-signals → state = `IN_SESSION`.
-
-Response behavior: answer the question normally. No state declaration.
-Silent monitoring continues.
-
----
-
-**Example 2 — HANDOFF ALERT mid-task triggers SESSION_ENDING**
-
-Session is 22 turns in. 8 MCP calls made. User asks Claude to continue a
-code refactor. On evaluating thresholds, HANDOFF ALERT fires (turn count
-+ MCP calls combined).
-
-State inference: HANDOFF ALERT just fired → state = `SESSION_ENDING`.
-
-Response behavior — FAIL case: Claude completes the refactor, then appends
-the HANDOFF ALERT at the end. This violates the immediate-handoff rule and
-the forbidden-action rule for SESSION_ENDING.
-
-Response behavior — PASS case:
-
-```
-[STATE: SESSION_ENDING]
-
-🔴 HANDOFF ALERT
-
-Session length has reached a point where context quality is at real risk.
-Stopping the refactor mid-way. The handoff block below captures current
-state so the next session can resume cleanly.
-
-[handoff block follows with current file, line number, what was done,
-what remains]
-```
-
-No further task work is performed this turn. The refactor resumes in a new
-session with the handoff as context.
-
----
-
-**Example 3 — SESSION_ENDED enforcement**
-
-Handoff block was delivered in the previous Claude turn. User replies
-"thanks, also one more quick question — can you just fix this one line?"
-
-State inference: handoff block present in conversation → state =
-`SESSION_ENDED`.
-
-Response behavior — FAIL case: Claude answers the question. This violates
-the SESSION_ENDED forbidden-action rule.
-
-Response behavior — PASS case:
-
-```
-[STATE: SESSION_ENDED]
-
-This session already closed with a handoff. Paste the handoff block into
-a new conversation and I'll pick up the question there — starting fresh
-keeps the next session clean and the handoff accurate.
-```
-
----
-
-**Example 4 — User-initiated handoff mid-sprint**
-
-User is in the middle of a multi-sprint chain. They say "generate handoff
-prompt" — explicit session-end signal, but no HANDOFF ALERT threshold fired.
-Sprint is incomplete.
-
-State inference: signal 1 no handoff delivered yet → signal 2 user said
-"generate handoff prompt" → state = `SESSION_ENDING`.
-
-Response behavior — FAIL case: Claude completes the current sprint task first,
-then produces the handoff. This violates SESSION_ENDING forbidden-action rules
-(no new task work beyond the handoff).
-
-Response behavior — PASS case:
-
-```
-[STATE: SESSION_ENDING]
-
-Sprint stopping here per your request. Handoff captures current state — next
-session resumes with the remaining work.
-
-[handoff block with IN FLIGHT: current sprint — exact file, line, and
-remaining edits; EXECUTION CONTEXT for next session; THREAD field set]
-```
-
-No additional task work is attempted. The sprint resumes in a new session.
-
----
-
-**Example 5 — Explicit close signal, no interrupt (D-125 direct path)**
-
-Session is 8 turns in. No HANDOFF ALERT fired. No tool-use-limit interrupt.
-User says "end session" — an explicit session-end signal.
-
-State inference: no handoff delivered → user said "end session" → state = `SESSION_ENDING`.
-
-Response behavior — FAIL case: Claude outputs "Close-out pending. Say continue
-to run it." and stops. This is a process failure — the "Close-out pending" pause
-exists ONLY for §7.0 tool-use-limit interrupt recovery. For a clean explicit
-close signal with no prior interrupt, the pause is pure overhead. (D-125)
-
-Response behavior — PASS case: Claude loads the Session Handoff Format Reference,
-runs §7.2 close-out (Notion write, Linear fetch, verification), and produces the
-fenced handoff block in the same response:
-
-```
-[STATE: SESSION_ENDING]
-
-Here's the handoff block — paste this at the start of your next session to resume.
-
-[fenced handoff block — all fields populated from verified session state]
-```
-
-The format reference load, Notion write, and Linear fetch all happen before the
-handoff block is produced. No user prompt required between session-end signal and
-handoff delivery.
+See `references/examples.md` — five worked examples covering all state
+transitions and failure modes (IN_SESSION normal work, HANDOFF ALERT
+mid-task, SESSION_ENDED enforcement, user-initiated handoff, explicit
+close signal D-125 direct path).
 
 ---
 
