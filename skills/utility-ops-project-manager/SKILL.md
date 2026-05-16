@@ -450,7 +450,7 @@ Feature lock date: May 15
 **Output:** "Before I log that — where does it fit? Must (game fails without it) / Should (significantly weaker without it) / Could (nice to have) / Won't (this version)? If it's a Must, something currently in scope needs to move out to make room."
 
 ### Example 4 — Push work
-**User:** "I can't get to the audio design doc this week, too much going on at the day job."
+**User:** "Audio design doc won't happen this week — day job is too heavy."
 **Claude action:** Update Linear issue to Backlog, remove from current cycle.
 **Output:** "Pushed CW-22 (Audio Design Doc) to backlog. It'll resurface at next sprint planning."
 

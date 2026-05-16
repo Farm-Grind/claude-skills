@@ -39,7 +39,7 @@ the canonical pattern this skill enforces.
 Failure modes Claude exhibits without this skill. This is why the skill exists.
 
 1. **Rationalizing "minor fix" to skip Gate 0** — every update feels minor; use the binary table.
-2. **Applying BEHAVIORAL ADDITIONs without user confirmation** — rules added "because they seem useful" measurably degrade task-specific performance (arxiv 2601.22025).
+2. **Applying BEHAVIORAL ADDITIONs without user confirmation** — rules added "because they seem useful" measurably degrade task-specific performance; SkillReducer (arxiv 2603.29919) documents 38.5% body actionability loss from unconfirmed additions.
 3. **Reference file missing silently** — SKILL.md cites a file; Claude runs from memory; no error appears. Gate 8 existence check is the only structural prevention.
 4. **Running Gate 7 grep from a prior turn** — results go stale after any edit. Re-run after every edit batch.
 5. **Skipping Gate 8b under task load** — it's the last gate before packaging and the most likely to be dropped. Block is required in conversation before `present_files`.
@@ -417,13 +417,15 @@ All checks are HARD FAIL conditions. Delivery stops until all pass.
 
 After Gate 8b and 8c pass, confirm delivery and write the registry.
 
-**Registry write:**
+**Registry write (HARD FAIL if any step fails — runs on create, update, and remove):**
 ```
 REGISTRY_WRITE — [skill name] — [version] — [INSTALLED / STAGED]
-Mechanism: Cloudflare D1 — database `claude-config` (afd78e0e-583e-4e78-87fc-dd6bc8150ce9)
-  SELECT * FROM skills WHERE name = '<skill-name>'  — verify absent before insert
-  INSERT OR REPLACE INTO skills (name, version, status, updated_at) VALUES (...)
-Verify: re-query to confirm entry present before reporting complete.
+D1: claude-config (afd78e0e-583e-4e78-87fc-dd6bc8150ce9) — table: skills
+New skill ceiling: SELECT value FROM secrets WHERE key IN ('max_skills','max_total_lines') then SELECT COUNT(*) cnt, COALESCE(SUM(lines),0) ttl FROM skills WHERE status='INSTALLED'
+  HARD FAIL if cnt >= max_skills OR ttl + this_skill_lines > max_total_lines — report [N/50 — L/17500]
+Install/Update: INSERT OR REPLACE INTO skills (name,version,status,lines,updated_at) VALUES (...)
+Remove: DELETE FROM skills WHERE name = '<skill-name>'
+Verify: re-query — entry present (install/update) or absent (remove) — HARD FAIL if wrong
 ```
 
 | Skill state | Status |
@@ -431,8 +433,6 @@ Verify: re-query to confirm entry present before reporting complete.
 | New skill (never INSTALLED) | STAGED — promote after one confirming session |
 | Existing INSTALLED — additive update | INSTALLED — promote immediately. Additive: sections/examples added, no workflow steps removed. |
 | Existing INSTALLED — structural rewrite | STAGED — promote after one confirming session. Structural: workflow changed, major sections replaced, trigger conditions changed. |
-
-**evals/ recommendation:** When promoting STAGED → INSTALLED after a confirming session, recommend generating `evals/evals.json` for regression detection. Not required; flag as future work in Next Steps.
 
 **Clean pass:**
 ```
