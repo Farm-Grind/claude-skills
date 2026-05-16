@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Sync Farm-Grind/claude-skills → /mnt/skills/user/
-# No credentials required — repo is public.
-# Usage: bash sync-skills.sh
+# No credentials required for clone (public repo).
+# Usage: bash /mnt/skills/user/ci/sync-skills.sh
 #
 # Guarantees:
 #   - Atomic: stages to temp dir before touching live target
@@ -33,8 +33,10 @@ dst = sys.argv[2]
 repo_skills = set(os.listdir(src))
 live_skills  = set(os.listdir(dst)) if os.path.isdir(dst) else set()
 
-# Remove skills no longer in repo
+# Remove skills no longer in repo (preserve credentials file)
 for name in live_skills - repo_skills:
+    if name.startswith('.'):
+        continue
     path = os.path.join(dst, name)
     if os.path.isdir(path):
         shutil.rmtree(path)

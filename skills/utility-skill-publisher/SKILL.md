@@ -61,6 +61,9 @@ git clone --depth=1 https://github.com/Farm-Grind/claude-skills.git /tmp/cs-$$
 After writing and validating, deploy to the live load path and push:
 
 ```bash
+# Load credentials (stored once, never expires, never enters repo)
+source /mnt/skills/user/.github-credentials
+
 # Deploy immediately — skills load from here at session start
 cp -r /tmp/cs-$$/skills/<skill-name> /mnt/skills/user/<skill-name>
 
@@ -68,13 +71,13 @@ cp -r /tmp/cs-$$/skills/<skill-name> /mnt/skills/user/<skill-name>
 cd /tmp/cs-$$
 git add skills/<skill-name>/
 git commit -m "<message>"
-git remote set-url origin "https://<PAT>@github.com/Farm-Grind/claude-skills.git"
+git remote set-url origin "https://${GITHUB_PAT}@github.com/Farm-Grind/claude-skills.git"
 git push origin main
-rm -rf /tmp/cs-$$  # PAT gone from disk
+rm -rf /tmp/cs-$$
 ```
 
-PAT is required for write access. Provide at skill-authoring time — this is the
-correct context. Not a session-start ritual.
+No manual PAT paste. If `/mnt/skills/user/.github-credentials` is missing,
+stop and tell the user — do not ask them to paste a PAT inline.
 
 **5. Confirm CI green**
 
