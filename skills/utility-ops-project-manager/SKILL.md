@@ -450,7 +450,7 @@ Feature lock date: May 15
 **Output:** "Before I log that — where does it fit? Must (game fails without it) / Should (significantly weaker without it) / Could (nice to have) / Won't (this version)? If it's a Must, something currently in scope needs to move out to make room."
 
 ### Example 4 — Push work
-**User:** "No time for the audio design doc this week, too much going on at the day job."
+**User:** "I can't get to the audio design doc this week, too much going on at the day job."
 **Claude action:** Update Linear issue to Backlog, remove from current cycle.
 **Output:** "Pushed CW-22 (Audio Design Doc) to backlog. It'll resurface at next sprint planning."
 
@@ -498,4 +498,3 @@ This skill does not:
 | references/domain-phases.md | Domain-specific phase equivalents (game / novel / comic) |
 | utility-core-researcher | Domain research before or during a project |
 | loop-extended-sequencer | Loop-specific sequencing (supersedes this skill for The Loop) |
-| loop-core-tracker | Loop-specific document and checklist tracking |
