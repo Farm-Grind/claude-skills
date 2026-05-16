@@ -50,9 +50,31 @@ python3 ci/validate.py skills/<skill-name>/SKILL.md
 
 Fix every FAIL. WARN on line count is advisory.
 
-**4. Push via GitHub connector**
+**4. Deploy and push**
 
-Commit to `main`. CI runs the validator against the full corpus on push.
+Work inside a clone of the repo so the working copy IS the repo copy:
+
+```bash
+git clone --depth=1 https://github.com/Farm-Grind/claude-skills.git /tmp/cs-$$
+```
+
+After writing and validating, deploy to the live load path and push:
+
+```bash
+# Deploy immediately — skills load from here at session start
+cp -r /tmp/cs-$$/skills/<skill-name> /mnt/skills/user/<skill-name>
+
+# Push — triggers CI validation on GitHub
+cd /tmp/cs-$$
+git add skills/<skill-name>/
+git commit -m "<message>"
+git remote set-url origin "https://<PAT>@github.com/Farm-Grind/claude-skills.git"
+git push origin main
+rm -rf /tmp/cs-$$  # PAT gone from disk
+```
+
+PAT is required for write access. Provide at skill-authoring time — this is the
+correct context. Not a session-start ritual.
 
 **5. Confirm CI green**
 
