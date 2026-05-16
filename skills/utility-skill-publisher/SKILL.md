@@ -360,7 +360,8 @@ ls /tmp/<skill-name>/assets/ 2>/dev/null    # only if assets/ declared
 # HARD FAIL if Gate 2.5 declared scripts/ or assets/ and the directory is absent.
 ```
 
-**Step 1 — Filesystem installation (primary — always execute first):**
+**Step 1 — Session install (always execute first):**
+Makes the skill available in the current session. Session-local only — resets on next session start.
 ```bash
 mkdir -p /mnt/skills/user/<skill-name>/
 cp /tmp/<skill-name>/SKILL.md /mnt/skills/user/<skill-name>/SKILL.md
@@ -369,18 +370,18 @@ cp -r /tmp/<skill-name>/scripts/ /mnt/skills/user/<skill-name>/scripts/ 2>/dev/n
 cp -r /tmp/<skill-name>/assets/ /mnt/skills/user/<skill-name>/assets/ 2>/dev/null || true
 ls /mnt/skills/user/<skill-name>/
 ```
-HARD FAIL: filesystem install must succeed and output must be visible before Step 2 runs.
+HARD FAIL: output must be visible before Step 2 runs.
 
-**Step 2 — .skill packaging (secondary — for backup and sharing):**
+**Step 2 — Package and present (mandatory — required for persistence):**
+/mnt/skills/user/ resets at session start. The .skill upload is the ONLY persistent deployment path. Not optional.
 ```bash
 cd /mnt/skills/examples/skill-creator
-python -m scripts.package_skill /tmp/<skill-name>/ /tmp/pkg-output/
+python3 -m scripts.package_skill /tmp/<skill-name>/ /tmp/pkg-output/
 cp /tmp/pkg-output/<skill-name>.skill /mnt/user-data/outputs/
 ```
+Call present_files with the .skill path. User uploads via Skills UI to persist. Must return Skill is valid! — HARD FAIL otherwise.
 
-Validation must return `Skill is valid!` before proceeding.
-
-**Self-application rule:** When this skill's SKILL.md is edited, always run packaging and present the `.skill` file without being asked.
+**Self-application rule:** When this skill's SKILL.md is edited, always run both steps and present the .skill file without being asked.
 
 **Packaging failure recovery:** (1) Confirm `SKILL.md` is at `/tmp/<skill-name>/SKILL.md`. (2) Run `wc -l` — must be ≤ 500. (3) Re-run Gate 7 greps. (4) Retry once; if still failing, verify script path and Python availability.
 
