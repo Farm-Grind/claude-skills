@@ -85,12 +85,31 @@ Green CI on `main` = skill is live. This is the only done state.
 
 ---
 
-## Multi-domain dispatcher note
+## Dispatcher skills
 
-For dispatcher skills spanning multiple reference domains,
-`references/cross-domain-map.md` is required. A stub exists at
-`skills/utility-skill-publisher/references/cross-domain-map.md` —
-copy and populate for the target skill.
+All skills are dispatchers. Before writing or auditing any skill, read:
+
+```
+references/dispatcher-skeleton.md
+```
+
+It contains: the canonical 5-part body structure, classification table
+template, domain code conventions, resource placement rules (body vs
+references/ vs scripts/ vs assets/), cross-domain-map template, and a
+worked example. Do not build a dispatcher from memory.
+
+Resource placement summary (full criteria in dispatcher-skeleton.md §7–8):
+
+- **Body** — routing logic, imperative instructions, fenced examples ≤ 20 lines
+- **references/** — content Claude reads before executing: domain knowledge,
+  formulas, frameworks, patterns. Anything > 20 lines or > 5-row table.
+- **scripts/** — deterministic executable code Claude runs and checks output
+  of. Use when the same procedure repeats across runs with no judgment step.
+- **assets/** — fillable templates Claude copies and populates. Use when
+  output is a document/boilerplate with fixed structure.
+
+For skills with 2+ active domains: also populate `references/cross-domain-map.md`
+using the template in dispatcher-skeleton.md §5.
 
 ---
 
@@ -108,4 +127,5 @@ copy and populate for the target skill.
 |---|---|
 | `ci/validate.py` | Single mechanical validator — all deterministic checks |
 | `ci/corpus-ceiling.txt` | User-owned corpus ceiling |
+| `references/dispatcher-skeleton.md` | Canonical dispatcher pattern, resource placement rules |
 | `Farm-Grind/claude-skills` | Authoritative source of truth for all skills |
