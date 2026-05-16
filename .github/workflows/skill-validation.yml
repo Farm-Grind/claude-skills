@@ -1,0 +1,39 @@
+name: Skill Validation
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  validate:
+    name: Validate Skills
+    runs-on: ubuntu-latest
+    # Advisory mode: continue-on-error keeps the job green so it never blocks merges.
+    # Remove continue-on-error and enable Required Status Check in branch protection
+    # only after the full corpus passes (cutover step 6).
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate all SKILL.md files
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            echo "::group::$f"
+            if ! python3 ci/validate.py "$f"; then
+              fail=1
+            fi
+            echo "::endgroup::"
+          done < <(find skills -name SKILL.md | sort)
+          exit $fail
+
+      - name: Enforce corpus ceiling
+        run: python3 ci/check_ceiling.py

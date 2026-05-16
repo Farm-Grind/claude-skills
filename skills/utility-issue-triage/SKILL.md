@@ -1,0 +1,306 @@
+---
+name: utility-issue-triage
+description: >
+  Diagnoses Claude response failures across past conversations. Produces
+  severity-ranked findings, specific root causes, and classified fix proposals
+  (STRUCTURAL/TEMPORAL/BEHAVIORAL). Routes to correct triage pattern based on
+  request signal. Use automatically — do not wait to be asked. Trigger on ANY
+  of these signals: "what went wrong", "run a diagnostic", "audit last N
+  sessions", "this keeps happening", "did the fix hold", "triage session
+  failures", "failures in [domain]", "post-implementation check", session ends
+  with multiple user corrections, repeated frustration with Claude behavior.
+  Do NOT use for: single isolated one-off correction with no recurrence signal;
+  lore canon checks; pre-delivery quality gate (use utility-core-output-gate);
+  real-time session monitoring (use utility-core-session-monitor).
+  Load once per session.
+---
+SKILL_VERSION: v1.2
+
+# utility-issue-triage
+
+Project-agnostic diagnostic tool for identifying, classifying, and systematically
+fixing Claude response failures. Routes to one of 5 triage patterns.
+
+Type: capability-uplift
+
+---
+
+## GOTCHAS
+
+1. **Step E skipped** — DUP-vs-HB routing breaks silently; all recurrence findings misclassify as DUP. HARD FAIL is the only structural prevention.
+2. **Root cause labeled "skill not loaded"** — symptom, not mechanism. Must name why: trigger mismatch, session length, wrong skill domain. Stub root causes block Fix Block generation.
+3. **Fix Block self-review absent** — required output field. A report missing it is malformed.
+4. **Q-RC1/2/3 not produced visibly** — absence is a format error that blocks Fix Block generation.
+5. **Reference files not loaded** — running taxonomy, heuristics, or D1 queries from memory = silent degradation. Always load via explicit `view` before the relevant pass.
+
+---
+
+## PART 0 — TRIAGE PATTERN ROUTING
+
+This skill is a triggered tool, not an autonomous monitor. LLMs cannot reliably
+detect session quality in the same generation context that produced the failures
+[arxiv 2512.20578]. Explicit invocation is correct.
+
+| Signal | Pattern |
+|---|---|
+| "what went wrong in that session", single session | Pattern 1 — Post-mortem |
+| "this keeps happening", "last N sessions", recurrence | Pattern 2 — Cross-session |
+| "is this skill working", "audit this skill", methodology | Pattern 3 — Methodology |
+| "did the fix hold", "post-implementation check" | Pattern 4 — Verification (CAPA) |
+| recurrence signal after a prior fix was applied | Pattern 4 first — verify implementation before new diagnosis |
+| "failures in [domain]", named subsystem failure | Pattern 5 — Domain-scoped |
+
+Load `references/triage-patterns.md` for per-pattern protocol detail and window selection table.
+
+---
+
+## PART 1 — FAILURE TAXONOMY
+
+Load `references/failure-taxonomy.md` before Pass 2 classification. Running from memory is not permitted.
+
+Contains: 15 failure categories (SK, LC, DR, HL, FMT, IH, A7, SY, DUP, MCP-W, CTX, VOI, WL, HB, CI), 4 severity levels (CRITICAL/HIGH/MEDIUM/LOW), fix category taxonomy (STRUCTURAL/TEMPORAL/BEHAVIORAL), HB fix_category_floor rule.
+
+---
+
+## PART 2 — SCAN PROTOCOL
+
+**Step E — Error log baseline (run before Pass 1):**
+
+Load `references/d1-queries.md` and run the Step E query. Classify results into three buckets (CONFIRMED OPEN / IMPLEMENTED STILL FAILING / RESOLVED) per the bucket table in that file.
+
+If D1 unavailable or error_log empty: note it, skip DUP-vs-HB routing — all recurrence findings default to DUP.
+HARD FAIL: Step E must be attempted before Pass 1.
+
+**Pass 1 — Broad scan:**
+
+Load `references/failure-heuristics.md` to guide flagging.
+
+1. Read full exchange — both human and Claude turns.
+2. Flag turns where output does not match system prompt, preferences, corrections, or prior sessions.
+3. Mark each: conversation ID, turn number, suspected category, one-line anomaly.
+4. Do not deep-dive. Flag and move on.
+
+**Pass 2 — Deep classification:**
+
+Before confirming any root cause, produce visibly (absence = format error, blocks Fix Block):
+```
+Q-RC1: [Visible symptom — the observable wrong output, one sentence]
+Q-RC2: [Mechanism — why it happened. "Skill not loaded" is NOT a mechanism.]
+Q-RC3: [Architectural layer: system prompt / user preferences / skill / inline]
+```
+For compound failures: one Q-RC1/2/3 block per mechanism.
+
+For DR findings, classify before proposing fix:
+```
+Rule type: [OMISSION ("never X") / COMMISSION ("always Y")]
+```
+Omission rules decay under context depth [arxiv 2604.20911]. Fix: rewrite as commission-type OR add structural enforcement. Adding another omission rule is prohibited.
+
+DUP-vs-HB routing: check Step E bucket results before classifying any recurrence as DUP.
+
+**Pass 3 — Pattern synthesis:**
+1. Group findings by category. Identify 2+ in same category — systemic, not isolated.
+2. For each systemic pattern: identify single intervention most likely to prevent recurrence.
+3. Distinguish one-off fixes vs. structural fixes.
+4. **Layer execution order:** If Fix Block has multi-layer fixes, append: `Fix sequence: [layer1] (1st) → [layer2] (2nd)`. Omit if all independent.
+
+If any reference file is missing: `⚠ [filename] not found — running degraded. Queue skill maintenance item.` Always proceed.
+
+---
+
+## PART 3 — OUTPUT FORMAT
+
+**Clean scan:**
+```
+DIAGNOSTIC  [date]  [N] convos  Nc:0  Nh:0  Nm:0
+Scanned    [convo IDs or date range]
+Result     No failures identified in window.
+Queue      none
+Log        none
+```
+
+**Standard output block:**
+```
+DIAGNOSTIC  [date]  [N] convos  Nc:X  Nh:X  Nm:X
+Scanned    [convo IDs or date range]
+Blocker    none  (or: F-001 -- [what it prevents])
+Patterns
+  P-001  [Name]: [mechanism] (F-001, F-005)
+Critical
+  F-001  CTX  [Title]  --  root: [cause]  --  ref: [convo title]
+High
+  F-002  SK   [Title]  --  root: [cause]  --  ref: [convo title]
+Fixes
+  P-001  [verb: specific action -- skill name / §number]
+Fix Block self-review:  [per Part 4b — or "all one-off fixes, no structural changes"]
+Queue  [N new ops_queue items written — IDs: OPS-XXX]
+Log    [N new error_log entries written — IDs: ERR-XXX]
+```
+
+**Fix Block self-review is a required output field. A report missing it is malformed.**
+
+**Fix Block format:**
+```
+FIX-XXX: [Title]
+Addresses:           [PATTERN-XXX / F-XXX]
+Action:              [Skill name + section + new behavior]
+Fix category:        [STRUCTURAL / TEMPORAL / BEHAVIORAL]
+Research basis:      [Citation. If none: UNVERIFIED — must be DEFERRED.]
+STRUCTURAL note:     [Required if BEHAVIORAL — STRUCTURAL option considered and why rejected]
+Regression assertion:
+  Target behavior changes: [specific behavior this fix changes]
+  Must NOT change:         [1-3 behaviors at same layer that must be unaffected]
+  Validation scenario:     [conversation scenario to confirm fix worked]
+Priority:            [IMMEDIATE / NEXT SESSION / DEFERRED]
+Status:              PROPOSED
+```
+
+Status is always PROPOSED at delivery. A different session advances it to VALIDATED.
+
+For D1 write patterns (IMMEDIATE items, queue depth check, error_log INSERT): load `references/d1-queries.md`.
+
+---
+
+## PART 4 — FIX GENERATION RULES
+
+**Rule 1 — Root cause, not symptom.** Fix must address the mechanism that produced the failure, not the visible output error.
+**Rule 2 — Structural over one-off.** 2+ occurrences of same failure type → fix must be structural.
+**Rule 3 — Holistic synthesis.** Check for conflicts. Group related fixes. Never propose conflicting instructions.
+**Rule 4 — Specificity gate.** Every fix names: what changes, where (skill / rule / section), new behavior.
+HARD FAIL: Never deliver a Fix Block with any fix that fails the specificity gate.
+**Rule 5 — Priority assignment.** IMMEDIATE = prevents active failure or blocks work. NEXT SESSION = quality improvement, no active incident. DEFERRED = low-severity or needs more data.
+**Rule 6 — Layer specification.** Every fix names its architectural layer. Verify the rule lives there.
+HARD FAIL: Never deliver a Fix Block with an unverified target layer.
+**Rule 7 — STRUCTURAL-first mandate.** For recurring failures or HB: (a) enumerate STRUCTURAL option; (b) if feasible STRUCTURAL exists: BEHAVIORAL is PROHIBITED; (c) if no STRUCTURAL: state why explicitly, then use TEMPORAL before BEHAVIORAL. Required visible: `STRUCTURAL considered: [evaluated / why rejected or adopted]`.
+**Rule 8 — HB fresh-context protocol.** HB requires a SEPARATE EVALUATION SESSION. (a) Produce Q-RC1/2/3. (b) Produce DIAG-handoff with transcript segments, prior fix implementation, diagnostic questions. (c) DO NOT propose new fix for HB in same session. Visible: `HB finding — fix proposal deferred to fresh-context session per Rule 8.`
+Triggered-tool note: if not explicitly invoked, verify signal before proceeding [arxiv 2512.20578].
+
+---
+
+## PART 4b — FIX BLOCK ADVERSARIAL SELF-REVIEW
+
+Run after completing Fix Block, before delivering the report. Block delivery until confirmation block is produced.
+For each fix:
+1. **What is the failure mechanism?** (Not symptom — mechanism.)
+2. **What layer does this fix target?**
+3. **Is that layer reachable when the failure mechanism is active?** If No: mark WL; rewrite before delivering.
+**HB special rule:** Run Part 4c before this sequence. BEHAVIORAL for HB = hard fail at 4c. Once 4c passes, this sequence is mandatory — prior analyst already answered Q3 as Yes and was wrong.
+
+**Q4 — Counterfactual test:**
+```
+Q4: If this fix had been in place, would the diagnosed conversation have produced correct output?
+  Yes       → proceed.
+  No        → fix addresses different mechanism. Reanalyze with Q-RC1/2/3.
+  Uncertain → flag explicitly. For HB: Uncertain = defer to fresh-context per Rule 8.
+```
+For BEHAVIORAL/TEMPORAL fixes: mark UNCERTAIN by default unless specific transcript evidence shows mechanism was addressable in-context.
+**Confirmation block (required for any Fix Block with structural fixes):**
+```
+Fix Block self-review:
+  [Fix ID]  Mechanism: [stated]  Layer: [named]  Survives mechanism: [Yes/No]
+            Q4: [Yes / No / Uncertain — reason]
+  Status: CLEAR to deliver / BLOCKED — [reason]
+```
+HARD FAIL: Do not deliver a Fix Block with structural fixes without this block.
+---
+
+## PART 4c — FIX QUALITY GATE
+
+Run before Part 4b for every fix. Mandatory for HB; required for structural fixes.
+
+| Q1: Model judgment required? | Q2: External tool / format constraint / bash? | Q3: Visible output in separate turn? | Category |
+|---|---|---|---|
+| YES | NO | NO | BEHAVIORAL |
+| YES | NO | YES | TEMPORAL |
+| YES | YES | — | STRUCTURAL |
+| NO | YES | — | STRUCTURAL |
+| NO | NO | YES | TEMPORAL |
+| NO | NO | NO | Insufficient evidence — rewrite |
+
+"Better criteria" or "clearer language" fails Q1 regardless — self-attribution bias operates within generation context [arxiv 2603.04582].
+HB gate: Proposed category must be ≥ TEMPORAL. BEHAVIORAL for HB = hard fail.
+HARD FAIL: Never run Part 4b on a BEHAVIORAL fix for an HB finding.
+
+**Output block (required for every fix):**
+```
+Fix Quality Gate:
+  [Fix ID]  Q1: [Y/N]  Q2: [Y/N]  Q3: [Y/N]  → [STRUCTURAL / TEMPORAL / BEHAVIORAL]
+  HB gate: [PASS / HARD FAIL — rewrite required]
+```
+
+---
+
+## Examples
+
+**Example 1 — Clean scan (P1):**
+```
+DIAGNOSTIC  2026-05-12  2 convos  Nc:0  Nh:0  Nm:0
+Scanned    2026-05-11 to 2026-05-12
+Result     No failures identified in window.
+Queue      none
+Log        none
+```
+
+**Example 2 — Standard finding with Fix Block (P2):**
+```
+DIAGNOSTIC  2026-05-12  4 convos  Nc:0  Nh:1  Nm:0
+Scanned    2026-05-09 to 2026-05-12
+Patterns
+  P-001  FMT: fenced block omitted for copy-paste content (F-001, F-002)
+High
+  F-001  FMT  Fenced block missing  --  root: A7 rule absent from Q-RC3 scan scope  --  ref: "Design session"
+  F-002  FMT  Same failure recurred  --  root: same mechanism, fix not applied  --  ref: "Code session"
+Fixes
+  P-001  Add: user preferences A7 to Q-RC3 scope in system prompt §3
+Fix Block self-review:
+  P-001  Mechanism: A7 absent from Q-RC3 scope  Layer: system prompt  Survives mechanism: Yes
+         Q4: Yes  Status: CLEAR to deliver
+Queue  OPS-041 (P2-blocking, skill-edit, QUEUED)
+Log    ERR-014 (FMT, HIGH, OPEN)
+```
+
+**Example 3 — HB finding, fix deferred:**
+```
+DIAGNOSTIC  2026-05-13  3 convos  Nc:1  Nh:0  Nm:0
+Step E     E-007 WL, queue_status = DONE — same WL recurs → HB
+Critical
+  F-001  WL(HB)  Wrong-layer fix recurred post-implementation
+         root: B-check in skill not loaded during sprint sessions
+         ref: "Sprint close-out"
+Fixes
+  HB finding — fix proposal deferred to fresh-context session per Rule 8.
+DIAG-handoff:
+  Failure segment: [transcript ref]  Prior fix: B-check added to utility-core-output-gate §3
+  Diagnostic question: What skill IS loaded in sprint sessions? Fix must target that layer.
+Fix Block self-review:  HB — no fix proposed this session.
+Queue  none
+Log    ERR-007 updated (HB escalation)
+```
+
+---
+
+## Out of Scope
+
+- Does NOT fix failures — diagnoses and proposes only.
+- Does NOT auto-detect session quality — requires explicit invocation.
+- Does NOT verify lore canon — use project lore-checker for LC findings.
+- Does NOT generate code fixes — use project code-guardian.
+- Does NOT monitor context length — use utility-core-session-monitor.
+- Does NOT log to D1 autonomously — Fix Block specifies writes; Claude executes after delivery.
+
+---
+
+## SEE ALSO
+
+| Skill / Resource | Domain |
+|---|---|
+| utility-core-output-gate | Pre-delivery checks A1–A8 and B1–B10 |
+| utility-core-session-monitor | Context length and drift signals |
+| loop-core-error-log | Legacy error log skill (pre-D1) |
+| cloudflare-storage_v1_3 | D1 query patterns, schema, queue submission |
+| triage-reference_v1 | Constraint budget, removal-before-addition protocol |
+| diagnostic-process-research-synthesis_v1_0 | Research grounding for Changes 1–5 |
+| references/failure-taxonomy.md | 15 failure categories, severity levels, fix taxonomy |
+| references/triage-patterns.md | Per-pattern capsules, window selection |
+| references/failure-heuristics.md | 14 Pass 1 detection heuristics |
+| references/d1-queries.md | Step E SQL, D1 write patterns, queue submission |
