@@ -85,6 +85,52 @@ def check_banned_arxiv(content: str) -> tuple[str, list[str]]:
     return ("FAIL" if hits else "PASS", hits)
 
 
+# ── Failure-audit-rules.json static checks (VR-05, VR-11) ───────────────────
+# WARN-level: printed but do not increment fails / block CI.
+# Source: D1 claude-config / validation_rules. Synced via ci/sync-failure-rules.py.
+
+BLANKET_EXCLUSION_PATTERNS = [
+    r"software.*out of scope",
+    r"exclude.*software",
+    r"no.*app.*recommendation",
+    r"not for.*apps",
+]
+
+PROJECT_NOUNS = ["The Loop", "Glowmoon", "Farm-Grind", "loop-core", "glowmoon"]
+
+# Sections where project nouns are acceptable in universal skills
+SAFE_SECTION_RE = re.compile(
+    r"(##\s*(NOT|Out of Scope|SEE ALSO).*?)(?=\n##|\Z)", re.DOTALL
+)
+
+
+def check_trigger_vocabulary(description_text: str) -> list[str]:
+    """VR-05 / P-06: Trigger description must not blanket-exclude consumer domains."""
+    warnings = []
+    for pattern in BLANKET_EXCLUSION_PATTERNS:
+        if re.search(pattern, description_text, re.IGNORECASE):
+            warnings.append(
+                f"WARN VR-05 [P-06]: description contains blanket exclusion "
+                f"matching '{pattern}' — may block valid consumer requests "
+                f"(ref: F-014 shopping skill missed note-taking app)"
+            )
+    return warnings
+
+
+def check_project_scope_contamination(content: str) -> list[str]:
+    """VR-11 / P-11: Universal skill bodies must not embed project-specific nouns."""
+    warnings = []
+    # Strip safe sections before checking
+    scrubbed = SAFE_SECTION_RE.sub("", content)
+    for noun in PROJECT_NOUNS:
+        if noun in scrubbed:
+            warnings.append(
+                f"WARN VR-11 [P-11]: body contains project-specific noun '{noun}' "
+                f"outside safe sections — move to references/ or Out of Scope"
+            )
+    return warnings
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         print("Usage: python3 ci/validate.py <path-to-SKILL.md>", file=sys.stderr)
@@ -141,6 +187,14 @@ def main() -> int:
         print(f"  banned arxiv: FAIL — {hits}")
     else:
         print(f"  banned arxiv: PASS")
+
+    # Failure-audit-rules checks (WARN only — do not block CI)
+    desc_match = re.search(r"description:\s*>\n(.*?)^---", content, re.MULTILINE | re.DOTALL)
+    desc_text = desc_match.group(1) if desc_match else ""
+    for warn in check_trigger_vocabulary(desc_text):
+        print(f"  trigger vocabulary: {warn}")
+    for warn in check_project_scope_contamination(content):
+        print(f"  scope contamination: {warn}")
 
     print("-" * 60)
     if fails:

@@ -1,0 +1,133 @@
+{
+  "_meta": {
+    "source": "D1 claude-config / validation_rules",
+    "database_id": "afd78e0e-583e-4e78-87fc-dd6bc8150ce9",
+    "last_synced": "2026-05-16",
+    "description": "Static CI mirror of failure audit validation rules. Do not edit manually — sync from D1 when rules change. See ci/sync-failure-rules.py for the sync command.",
+    "total_patterns": 12,
+    "total_findings": 33
+  },
+  "static_checks": [
+    {
+      "rule_id": "VR-01",
+      "applies_to": "skill",
+      "check_id": "missing_reference_files",
+      "description": "Every references/*.md cited in SKILL.md must exist on disk",
+      "linked_patterns": ["P-04"],
+      "severity": "HARD_FAIL",
+      "implementation": "Already in validate.py check_reference_files()"
+    },
+    {
+      "rule_id": "VR-02",
+      "applies_to": "skill",
+      "check_id": "line_count_ceiling",
+      "description": "SKILL.md must be <= 500 lines",
+      "linked_patterns": ["P-02"],
+      "severity": "HARD_FAIL",
+      "implementation": "Already in validate.py line count check"
+    },
+    {
+      "rule_id": "VR-04",
+      "applies_to": "skill",
+      "check_id": "banned_arxiv_ids",
+      "description": "No line may cite arxiv 2605.06445 or arxiv 2601.22025",
+      "linked_patterns": ["P-04"],
+      "severity": "HARD_FAIL",
+      "implementation": "Already in validate.py GREP_CHECKS"
+    },
+    {
+      "rule_id": "VR-05",
+      "applies_to": "skill",
+      "check_id": "trigger_vocabulary_coverage",
+      "description": "Trigger description must not exclude valid request types via overly narrow example vocabulary. Check: description must not contain 'software = out of scope' or equivalent blanket exclusions for consumer-relevant domains.",
+      "linked_patterns": ["P-06"],
+      "severity": "WARN",
+      "implementation": "grep_check: pattern='software.*out of scope|exclude.*software|no.*app.*recommendation', check_description=True"
+    },
+    {
+      "rule_id": "VR-11",
+      "applies_to": "skill",
+      "check_id": "no_project_specific_content_in_body",
+      "description": "SKILL.md body must not contain project-specific proper nouns (Loop, Glowmoon, etc.) except in the NOT-triggers or SEE ALSO sections. Project-specific content belongs in references/ files.",
+      "linked_patterns": ["P-11"],
+      "severity": "WARN",
+      "implementation": "grep_check: pattern='The Loop|Glowmoon|Farm-Grind', scope=body_only, exclude_sections=['NOT','SEE ALSO','Out of Scope']"
+    },
+    {
+      "rule_id": "VR-12",
+      "applies_to": "skill",
+      "check_id": "self_application_rule_present",
+      "description": "Any skill that packages or validates other skills must contain a self-application rule stating the process applies to itself. Check for: 'including.*itself' or 'self-application' in body.",
+      "linked_patterns": ["P-03"],
+      "severity": "WARN",
+      "implementation": "grep_check: pattern='including.*itself|self.application', applies_to_skills=['utility-skill-publisher']"
+    }
+  ],
+  "behavioral_rules": [
+    {
+      "rule_id": "VR-03",
+      "applies_to": "skill_update_sessions",
+      "description": "Every change must be classified STRUCTURAL/TEMPORAL/BEHAVIORAL before implementation. BEHAVIORAL requires user confirmation.",
+      "linked_patterns": ["P-03", "P-10"],
+      "enforcement": "SESSION_LEVEL — cannot be enforced by static CI; enforced via skill-publisher Gate 0.5"
+    },
+    {
+      "rule_id": "VR-06",
+      "applies_to": "user_pref_update_sessions",
+      "description": "For any recurring failure: BEHAVIORAL fix is insufficient — must escalate to STRUCTURAL or TEMPORAL.",
+      "linked_patterns": ["P-03"],
+      "enforcement": "SESSION_LEVEL"
+    },
+    {
+      "rule_id": "VR-07",
+      "applies_to": "audit_requests",
+      "description": "Any audit/review of Claude systems must identify an external (non-Claude) judgment node. If none exists, scope to a bounded deliverable with a checkable exit code.",
+      "linked_patterns": ["P-01", "P-08"],
+      "enforcement": "SESSION_LEVEL"
+    },
+    {
+      "rule_id": "VR-08",
+      "applies_to": "infrastructure_build_sessions",
+      "description": "Establish platform constraints empirically before building. Do not discover constraints through failure.",
+      "linked_patterns": ["P-07"],
+      "enforcement": "SESSION_LEVEL"
+    },
+    {
+      "rule_id": "VR-09",
+      "applies_to": "project_instruction_updates",
+      "description": "Check total instruction length vs ~15-rule envelope. Any addition without removal increases compliance decay.",
+      "linked_patterns": ["P-02"],
+      "enforcement": "SESSION_LEVEL"
+    },
+    {
+      "rule_id": "VR-10",
+      "applies_to": "all_deliverables",
+      "description": "Any content user must copy/paste/act on: complete self-contained fenced code block, no truncation, handoff last.",
+      "linked_patterns": ["P-09"],
+      "enforcement": "SESSION_LEVEL — enforced via user preferences A7"
+    }
+  ],
+  "open_findings": [
+    {
+      "finding_id": "F-013",
+      "pattern_code": "P-08",
+      "title": "Dispatcher framework audit plan at v4 — audit plan never executed",
+      "artifact_affected": "skills dispatcher framework",
+      "project_scope": "Loop v2"
+    },
+    {
+      "finding_id": "F-016",
+      "pattern_code": "P-07",
+      "title": "D1 variable limits and MCP param-size limits discovered mid-build — not yet formally documented as constraints",
+      "artifact_affected": "Loop v2 infrastructure",
+      "project_scope": "Loop v2"
+    },
+    {
+      "finding_id": "F-027",
+      "pattern_code": "P-07",
+      "title": "Notion handoff write fails when budget exhausted at HANDOFF ALERT — pre-budgeting fix not yet implemented",
+      "artifact_affected": "utility-core-session-monitor/SKILL.md close-out protocol",
+      "project_scope": "UNIVERSAL"
+    }
+  ]
+}
