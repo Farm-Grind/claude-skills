@@ -15,7 +15,7 @@ description: >
   real-time session monitoring (use utility-core-session-monitor).
   Load once per session.
 ---
-SKILL_VERSION: v1.2
+SKILL_VERSION: v1.3.1
 
 # utility-issue-triage
 
@@ -282,7 +282,7 @@ Log    ERR-007 updated (HB escalation)
 
 ## PART 5 — AUTO-WRITE PROTOCOL
 
-Runs after PART 3 output whenever findings exist. No user prompt required.
+Runs after PART 3 output whenever findings exist. Writes to **claude-config granular_findings only** — findings log, not fix queue. ops_queue and error_log writes remain gated; they execute only after a fix is validated by a separate session.
 
 **Step 1 — Check MCP availability:**
 Attempt `d1_database_query` on claude-config. If it fails: emit findings as SQL block (see d1-queries.md §Failure Audit INSERT) and stop. If it succeeds: proceed.
@@ -338,7 +338,8 @@ If MCP unavailable: `[MCP unavailable — SQL blocks emitted for manual executio
 - Does NOT verify lore canon — use project lore-checker for LC findings.
 - Does NOT generate code fixes — use project code-guardian.
 - Does NOT monitor context length — use utility-core-session-monitor.
-- DOES write findings to D1 automatically when Cloudflare MCP is connected — see PART 5.
+- DOES write findings to claude-config granular_findings automatically — see PART 5.
+- Does NOT write to ops_queue or error_log autonomously — Fix Block specifies writes; those execute only after fix is validated.
 
 ---
 
