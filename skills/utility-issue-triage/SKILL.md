@@ -15,7 +15,8 @@ description: >
   real-time session monitoring (use utility-core-session-monitor).
   Load once per session.
 ---
-SKILL_VERSION: v1.3.1
+gates_passed: 2026-05-17
+SKILL_VERSION: v1.4.0
 
 # utility-issue-triage
 
@@ -52,6 +53,15 @@ detect session quality in the same generation context that produced the failures
 | "failures in [domain]", named subsystem failure | Pattern 5 — Domain-scoped |
 
 Load `references/triage-patterns.md` for per-pattern protocol detail and window selection table.
+
+**Pre-session open-findings gate (required before any triage pattern):**
+Before any pass starts, run from the claude-skills repo:
+1. `python3 /home/claude/cs-work/ci/check_open_findings.py --emit-sql`
+2. Execute the emitted SQL via Cloudflare MCP on claude-config D1 (afd78e0e-583e-4e78-87fc-dd6bc8150ce9)
+3. `python3 /home/claude/cs-work/ci/check_open_findings.py --json '<D1 results>'`
+
+Exit 0 → proceed. Exit 1 → OPEN blocking findings — resolve each or pass `--override "<justification>"` before proceeding. Exit 2 (P-07-class only) → proceed.
+Repo absent: `git clone https://<PAT>@github.com/Farm-Grind/claude-skills.git /home/claude/cs-work` — PAT from `SELECT value FROM secrets WHERE key = 'GITHUB_PAT'` (D1 above).
 
 ---
 
@@ -292,6 +302,15 @@ Attempt `d1_database_query` on claude-config. If it fails: emit findings as SQL 
 SELECT 'F-' || printf('%03d', MAX(CAST(SUBSTR(finding_id,3) AS INTEGER)) + 1)
 FROM granular_findings
 ```
+
+**Step 2b — Fix type gate (required before Step 3):**
+For each finding with a classified fix_type from Part 4c, run before INSERT:
+```bash
+python3 /home/claude/cs-work/ci/check_fix_type.py --pattern <pattern_code> --fix-type <fix_type>
+```
+Exit 1 = HARD FAIL — BEHAVIORAL fix for a recurring pattern; reclassify before proceeding to Step 3.
+Exit 2 = WARN — document justification before INSERT.
+Repo path: /home/claude/cs-work/ci/ (clone if absent — see PART 0 gate above).
 
 **Step 3 — INSERT each new finding:**
 Load `references/d1-queries.md` §Failure Audit INSERT. Execute for every finding produced in PART 3. Map fields:
