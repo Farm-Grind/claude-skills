@@ -302,26 +302,27 @@ Load `references/d1-queries.md` §Failure Audit INSERT. Execute for every findin
 - `source_conversation` — current conversation URL if known; else NULL
 
 **Step 4 — Sync CI:**
+Query D1 for PAT (see d1-queries.md §Failure Audit INSERT "Get PAT for CI sync"), then execute:
 ```bash
-cd /home/claude/cs-push && \
-export GITHUB_PAT=$(python3 -c "
-import urllib.request, json
-req = urllib.request.Request(
-  'https://api.cloudflare.com/...',  # use d1_database_query instead
-)
-")
+cd /home/claude/cs-push
+git pull origin main
+# Update only the open_findings array in ci/failure-audit-rules.json:
+python3 - << 'EOF'
+import json
+from pathlib import Path
+# Findings list comes from Step 4 D1 query result — substitute actual rows below
+open_findings = []  # populated from D1 query output
+p = Path("ci/failure-audit-rules.json")
+data = json.loads(p.read_text())
+data["open_findings"] = open_findings
+data["_meta"]["last_synced"] = "YYYY-MM-DD"  # today's date
+p.write_text(json.dumps(data, indent=2))
+EOF
+git add ci/failure-audit-rules.json
+git commit -m "sync: failure audit findings [F-XXX added]"
+git push origin main
 ```
-Do not construct the PAT via bash fetch — query D1 for it directly:
-```sql
--- claude-config DB
-SELECT value FROM secrets WHERE key = 'GITHUB_PAT'
-```
-Then regenerate `ci/failure-audit-rules.json` open_findings array from current D1 state and push:
-```sql
-SELECT finding_id, pattern_code, title, artifact_affected, project_scope
-FROM granular_findings WHERE status = 'OPEN'
-```
-Update only the `open_findings` array in the existing JSON, commit, push. Commit message: `sync: failure audit findings [F-XXX added]`.
+HARD FAIL: if git push fails, emit the updated open_findings JSON as a fenced block for the next connected session.
 
 **Step 5 — Report in diagnostic output:**
 Append to the Log line: `[N findings written to claude-config granular_findings: F-XXX, F-YYY]`
