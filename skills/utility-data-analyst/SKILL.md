@@ -18,7 +18,7 @@ description: >
   purchase recommendations (use life-core-shopping). Load once per
   session.
 ---
-SKILL_VERSION: v1.0
+SKILL_VERSION: v1.1
 
 # Data Analyst — Public-Source Research and Synthesis
 
