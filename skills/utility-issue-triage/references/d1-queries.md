@@ -160,7 +160,7 @@ re-researching what is already documented.
 **Lookup by category (at diagnosis start, when failure domain is known):**
 ```sql
 SELECT research_id, finding, confidence, application_guidance,
-       misapplication_warning
+       misapplication_warning, misapplied_pattern_code
 FROM research_findings
 WHERE category = ?
 ORDER BY confidence DESC, research_id
@@ -168,19 +168,33 @@ ORDER BY confidence DESC, research_id
 
 **Keyword search across all findings:**
 ```sql
-SELECT research_id, category, finding, application_guidance
+SELECT research_id, category, finding, application_guidance,
+       misapplied_pattern_code
 FROM research_findings
 WHERE LOWER(finding) LIKE '%' || LOWER(?) || '%'
    OR LOWER(application_guidance) LIKE '%' || LOWER(?) || '%'
 ORDER BY confidence DESC
 ```
 
-**Look up misapplication warnings before proposing a fix:**
+**Given a failure pattern — find all research previously misapplied to enable it:**
 ```sql
-SELECT research_id, finding, misapplication_warning
+SELECT rf.research_id, rf.category, rf.finding,
+       rf.misapplication_warning, fp.name as pattern_name
+FROM research_findings rf
+JOIN failure_patterns fp ON rf.misapplied_pattern_code = fp.pattern_code
+WHERE rf.misapplied_pattern_code = ?
+ORDER BY rf.research_id
+```
+Use this during diagnosis: if the proposed fix cites research that was
+previously misapplied to justify this exact failure pattern, flag it.
+
+**Look up all research with any misapplication risk:**
+```sql
+SELECT research_id, category, finding, misapplication_warning,
+       misapplied_pattern_code
 FROM research_findings
-WHERE misapplication_warning != 'None.'
-ORDER BY research_id
+WHERE misapplied_pattern_code IS NOT NULL
+ORDER BY misapplied_pattern_code, research_id
 ```
 
 Category values for WHERE clause:

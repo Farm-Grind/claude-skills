@@ -164,7 +164,13 @@ def rgq_10_misapplication_warning(f: dict) -> list[str]:
 
 
 def rgq_11_warn_additive_without_flag(f: dict) -> list[str]:
-    """WARN only — does not cause HARD FAIL."""
+    """WARN only — does not cause HARD FAIL.
+
+    Catches the most obvious additive-language patterns locally. The full
+    check (JOIN against research_findings.misapplied_pattern_code to find
+    prior misapplications in the same category) runs in d1-validation.md
+    Step 2a and requires D1 access.
+    """
     guidance = f.get("application_guidance", "").lower()
     maw = f.get("misapplication_warning", "")
     if maw.strip() != "None.":
@@ -174,8 +180,9 @@ def rgq_11_warn_additive_without_flag(f: dict) -> list[str]:
         if re.search(pattern, guidance):
             warnings.append(
                 f"application_guidance contains additive-complexity language "
-                f"('{pattern}') without a misapplication_warning — "
-                f"verify this does not enable P-02 before INSERT"
+                f"matching '{pattern}' — misapplication_warning is 'None.' "
+                f"Run d1-validation.md Step 2a (misapplied_pattern_code JOIN) "
+                f"before INSERT to confirm no P-02 risk"
             )
     return warnings
 

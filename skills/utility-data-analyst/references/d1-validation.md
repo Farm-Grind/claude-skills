@@ -37,22 +37,38 @@ Exit code: [0=PASS / 1=FAIL / 2=WARN]
 
 ## Step 2 — Failure Pattern Cross-Check
 
-Query failure_patterns for keywords that appear in the finding or
-application_guidance. Flag any match before inserting.
+Two checks: (a) structured lookup of research previously misapplied to each
+pattern, (b) keyword check on the proposed finding's application_guidance.
+
+**2a — Structured: which patterns have prior misapplication history?**
 
 ```sql
-SELECT pattern_code, name, validation_requirement
-FROM failure_patterns
-WHERE
-  LOWER(?) LIKE '%' || LOWER(SUBSTR(name,1,15)) || '%'
-  OR LOWER(?) LIKE '%' || LOWER(SUBSTR(name,1,15)) || '%'
+SELECT fp.pattern_code, fp.name, fp.validation_requirement,
+       rf.research_id, rf.finding
+FROM failure_patterns fp
+JOIN research_findings rf ON rf.misapplied_pattern_code = fp.pattern_code
+ORDER BY fp.pattern_code
 ```
-(params: finding text, application_guidance text)
 
-Simpler alternative — scan manually: does the finding's application_guidance
-tell Claude to add gates, add rules, add checks, self-audit, or produce
-more diagnostic output? If yes, check against P-01 through P-12 before
-inserting. If a pattern match exists, populate misapplication_warning.
+Review the result. If the proposed finding is in the same category and makes
+a similar guidance recommendation to any returned finding, it carries the
+same misapplication risk. Set `misapplied_pattern_code` to match.
+
+**2b — Keyword check on application_guidance:**
+
+Does the proposed guidance tell Claude to: add gates, add rules, add checks,
+self-audit, produce more diagnostic output, or research before implementing?
+If yes, check against P-01 (self-referential loop) and P-02 (additive-only)
+before inserting. Populate `misapplied_pattern_code` if a match exists.
+
+**Useful reverse lookup (given a pattern, find all misapplied research):**
+
+```sql
+SELECT research_id, category, finding, misapplication_warning
+FROM research_findings
+WHERE misapplied_pattern_code = 'P-02'
+ORDER BY research_id
+```
 
 Required output block:
 ```
@@ -98,12 +114,16 @@ Decision: [INSERT new / UPDATE R-XXX / DISCARD — reason]
 INSERT INTO research_findings
   (research_id, category, finding, confidence, primary_source,
    source_type, application_guidance, misapplication_warning,
-   conversation_url)
+   misapplied_pattern_code, conversation_url)
 VALUES
   ('R-NNN', 'category', 'finding text', 'VERIFIED',
    'source', 'source_type', 'guidance', 'None.',
+   NULL,
    'https://claude.ai/chat/...')
 ```
+
+Set `misapplied_pattern_code` to the pattern code (e.g., `'P-02'`) if Step 2
+identified a misapplication risk, or `NULL` if none.
 
 Verify after INSERT:
 ```sql
