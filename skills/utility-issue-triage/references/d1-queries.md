@@ -92,6 +92,25 @@ SELECT content, updated_at FROM session_handoff WHERE key = 'CURRENT'
 
 These write to the **universal** failure audit DB, not the-loop-storage. Always use the claude-config DB UUID for these queries.
 
+**Pre-INSERT: fix type gate (required before any INSERT with fix_type field)**
+
+Run before every INSERT that sets fix_type. Bypassing this gate allows P-03 (BEHAVIORAL fix for recurring pattern) to recur through direct writes:
+
+```bash
+python3 /home/claude/cs-work/ci/check_fix_type.py --pattern <P-XX> --fix-type <STRUCTURAL|TEMPORAL|BEHAVIORAL>
+```
+
+Exit 1 = HARD FAIL — reclassify fix_type before INSERT. Exit 2 = WARN — document justification inline before INSERT. Repo absent: clone Farm-Grind/claude-skills via PAT below.
+
+To supply live recurrence count instead of local registry (recommended for patterns added after 2026-05-17):
+
+```sql
+-- Run on claude-config DB: afd78e0e-583e-4e78-87fc-dd6bc8150ce9
+SELECT recurrence_count FROM failure_patterns WHERE pattern_code = 'P-XX'
+```
+
+Then pass: `python3 ci/check_fix_type.py --pattern P-XX --fix-type BEHAVIORAL --recurrence-count <N>`
+
 **Get next finding ID:**
 ```sql
 SELECT 'F-' || printf('%03d', MAX(CAST(SUBSTR(finding_id,3) AS INTEGER)) + 1)
