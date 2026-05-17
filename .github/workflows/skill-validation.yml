@@ -10,11 +10,6 @@ jobs:
   validate:
     name: Validate Skills
     runs-on: ubuntu-latest
-    # Advisory mode: continue-on-error keeps the job green so it never blocks merges.
-    # Remove continue-on-error and enable Required Status Check in branch protection
-    # only after the full corpus passes (cutover step 6).
-    continue-on-error: true
-
     steps:
       - uses: actions/checkout@v4
 
