@@ -85,3 +85,66 @@ ORDER BY created_at ASC
 ```sql
 SELECT content, updated_at FROM session_handoff WHERE key = 'CURRENT'
 ```
+
+---
+
+## Failure Audit INSERT (claude-config DB: afd78e0e-583e-4e78-87fc-dd6bc8150ce9)
+
+These write to the **universal** failure audit DB, not the-loop-storage. Always use the claude-config DB UUID for these queries.
+
+**Get next finding ID:**
+```sql
+SELECT 'F-' || printf('%03d', MAX(CAST(SUBSTR(finding_id,3) AS INTEGER)) + 1)
+FROM granular_findings
+```
+
+**INSERT new finding:**
+```sql
+INSERT INTO granular_findings
+  (finding_id, pattern_code, title, source_conversation, symptom,
+   root_cause, fix_applied, fix_type, status, artifact_affected, project_scope)
+VALUES
+  ('F-XXX', 'P-XX', 'Short title', 'https://claude.ai/chat/...', 'Symptom: what wrong output looked like',
+   'Root cause: mechanism not symptom', NULL, 'STRUCTURAL', 'OPEN', 'skill or file affected', 'UNIVERSAL')
+```
+
+**UPDATE finding to RESOLVED:**
+```sql
+UPDATE granular_findings
+SET status = 'RESOLVED', fix_applied = 'What was done', fix_type = 'STRUCTURAL'
+WHERE finding_id = 'F-XXX'
+```
+
+**Increment pattern recurrence count:**
+```sql
+UPDATE failure_patterns
+SET recurrence_count = recurrence_count + 1, updated_at = datetime('now')
+WHERE pattern_code = 'P-XX'
+```
+
+**Get current OPEN findings (for CI JSON sync):**
+```sql
+SELECT finding_id, pattern_code, title, artifact_affected, project_scope
+FROM granular_findings WHERE status = 'OPEN'
+ORDER BY finding_id
+```
+
+**Get PAT for CI sync:**
+```sql
+SELECT value FROM secrets WHERE key = 'GITHUB_PAT'
+```
+
+Pattern code mapping (use closest match):
+- P-01 Self-referential audit loop
+- P-02 Additive-only / no budget enforcement
+- P-03 Behavioral fix for structural problem
+- P-04 Missing reference files / orphaned citations
+- P-05 Gate sequence violation
+- P-06 Wrong skill triggered / routing failure
+- P-07 Platform constraint discovery through failure
+- P-08 Unbounded meta-work / recommendation queue debt
+- P-09 Partial paste / incomplete deliverable
+- P-10 Position drift / specification drift
+- P-11 Skill scope contamination
+- P-12 Context-switch momentum overrides procedural gates
+

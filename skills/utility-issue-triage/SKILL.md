@@ -8,7 +8,8 @@ description: >
   of these signals: "what went wrong", "run a diagnostic", "audit last N
   sessions", "this keeps happening", "did the fix hold", "triage session
   failures", "failures in [domain]", "post-implementation check", session ends
-  with multiple user corrections, repeated frustration with Claude behavior.
+  with multiple user corrections, repeated frustration with Claude behavior,
+  user says "that was wrong" / "you got that wrong" / "that's incorrect" mid-session.
   Do NOT use for: single isolated one-off correction with no recurrence signal;
   lore canon checks; pre-delivery quality gate (use utility-core-output-gate);
   real-time session monitoring (use utility-core-session-monitor).
@@ -279,14 +280,65 @@ Log    ERR-007 updated (HB escalation)
 
 ---
 
-## Out of Scope
+## PART 5 — AUTO-WRITE PROTOCOL
+
+Runs after PART 3 output whenever findings exist. No user prompt required.
+
+**Step 1 — Check MCP availability:**
+Attempt `d1_database_query` on claude-config. If it fails: emit findings as SQL block (see d1-queries.md §Failure Audit INSERT) and stop. If it succeeds: proceed.
+
+**Step 2 — Assign finding ID:**
+```sql
+SELECT 'F-' || printf('%03d', MAX(CAST(SUBSTR(finding_id,3) AS INTEGER)) + 1)
+FROM granular_findings
+```
+
+**Step 3 — INSERT each new finding:**
+Load `references/d1-queries.md` §Failure Audit INSERT. Execute for every finding produced in PART 3. Map fields:
+- `pattern_code` — from failure taxonomy P-01 through P-12 (closest match; use P-12 if context-switch, P-03 if behavioral/self-attestation, P-09 if partial output, P-10 if position/spec drift)
+- `fix_type` — from Fix Quality Gate output (STRUCTURAL / TEMPORAL / BEHAVIORAL)
+- `status` — always OPEN on insert; only Claude that resolves it sets RESOLVED
+- `project_scope` — UNIVERSAL unless finding is demonstrably project-specific (name the project)
+- `source_conversation` — current conversation URL if known; else NULL
+
+**Step 4 — Sync CI:**
+```bash
+cd /home/claude/cs-push && \
+export GITHUB_PAT=$(python3 -c "
+import urllib.request, json
+req = urllib.request.Request(
+  'https://api.cloudflare.com/...',  # use d1_database_query instead
+)
+")
+```
+Do not construct the PAT via bash fetch — query D1 for it directly:
+```sql
+-- claude-config DB
+SELECT value FROM secrets WHERE key = 'GITHUB_PAT'
+```
+Then regenerate `ci/failure-audit-rules.json` open_findings array from current D1 state and push:
+```sql
+SELECT finding_id, pattern_code, title, artifact_affected, project_scope
+FROM granular_findings WHERE status = 'OPEN'
+```
+Update only the `open_findings` array in the existing JSON, commit, push. Commit message: `sync: failure audit findings [F-XXX added]`.
+
+**Step 5 — Report in diagnostic output:**
+Append to the Log line: `[N findings written to claude-config granular_findings: F-XXX, F-YYY]`
+If MCP unavailable: `[MCP unavailable — SQL blocks emitted for manual execution]`
+
+**HARD FAIL:** Never skip Step 4 after a successful Step 3 write — findings in D1 that aren't in the CI JSON are invisible to static enforcement.
+
+---
+
+
 
 - Does NOT fix failures — diagnoses and proposes only.
 - Does NOT auto-detect session quality — requires explicit invocation.
 - Does NOT verify lore canon — use project lore-checker for LC findings.
 - Does NOT generate code fixes — use project code-guardian.
 - Does NOT monitor context length — use utility-core-session-monitor.
-- Does NOT log to D1 autonomously — Fix Block specifies writes; Claude executes after delivery.
+- DOES write findings to D1 automatically when Cloudflare MCP is connected — see PART 5.
 
 ---
 
