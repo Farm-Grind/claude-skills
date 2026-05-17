@@ -452,6 +452,26 @@ Escalate to Quick Audit if result is ambiguous.
 
 ---
 
+## PART 13 — RESEARCH DATABASE GATE
+
+Fires when any research finding is being committed to D1. HARD FAIL: INSERT
+must not execute without the visible gate block below.
+
+Load `references/d1-validation.md` first. Run Step 1 (validate_research.py),
+Step 2 (failure pattern check), Step 3 (dedup check) in order.
+
+```
+RESEARCH DB GATE — [research_id]
+Step 1 RQG script:    [PASS / WARN (confirmed) / FAIL — blocked]
+Step 2 pattern check: [no matches / P-XX flagged — warning updated]
+Step 3 dedup:         [N in category, no near-duplicates / duplicate — decision]
+Decision:             [INSERT / UPDATE R-XXX / DISCARD]
+```
+
+HARD FAIL if this block is absent or any step shows FAIL before INSERT runs.
+
+---
+
 ## Out of Scope
 
 This skill does NOT:
@@ -471,6 +491,7 @@ This skill does NOT:
 | references/source-authority.md | Source authority scoring framework, labels, red flags |
 | life-core-shopping | Product and app purchase recommendations |
 | utility-skill-publisher | Consumes research output during Gate 0 of new skill creation |
+| references/d1-validation.md | Research database validation protocol — PART 13 gate steps, SQL patterns, RQG script usage |
 | AGENTIF benchmark | Multi-constraint instruction compliance |
 | AutoVerifier — arxiv 2604.02617 | Structured claim verification methodology |
 | Deep Researcher Sequential Plan Reflection — arxiv 2601.20843 | Sequential pass validity |

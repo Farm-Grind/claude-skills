@@ -148,3 +148,46 @@ Pattern code mapping (use closest match):
 - P-11 Skill scope contamination
 - P-12 Context-switch momentum overrides procedural gates
 
+
+---
+
+## Research Findings Lookup (claude-config DB: afd78e0e-583e-4e78-87fc-dd6bc8150ce9)
+
+Use during diagnosis when a failure has a known mechanism — look up whether
+validated research already explains it before proposing a fix. Prevents
+re-researching what is already documented.
+
+**Lookup by category (at diagnosis start, when failure domain is known):**
+```sql
+SELECT research_id, finding, confidence, application_guidance,
+       misapplication_warning
+FROM research_findings
+WHERE category = ?
+ORDER BY confidence DESC, research_id
+```
+
+**Keyword search across all findings:**
+```sql
+SELECT research_id, category, finding, application_guidance
+FROM research_findings
+WHERE LOWER(finding) LIKE '%' || LOWER(?) || '%'
+   OR LOWER(application_guidance) LIKE '%' || LOWER(?) || '%'
+ORDER BY confidence DESC
+```
+
+**Look up misapplication warnings before proposing a fix:**
+```sql
+SELECT research_id, finding, misapplication_warning
+FROM research_findings
+WHERE misapplication_warning != 'None.'
+ORDER BY research_id
+```
+
+Category values for WHERE clause:
+  skill-architecture, instruction-design, enforcement-architecture,
+  reliability-patterns, context-management, tool-capabilities,
+  react-native-supabase, prompt-generation, fitness, worldbuilding,
+  domain-knowledge-music, domain-knowledge-book-of-hours,
+  domain-knowledge-android, domain-knowledge-app-stores,
+  domain-knowledge-eve, domain-knowledge-fallout4,
+  model-usage, productivity, artist-persona
