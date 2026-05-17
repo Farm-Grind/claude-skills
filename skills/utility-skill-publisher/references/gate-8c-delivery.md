@@ -9,6 +9,7 @@ Load with `view` before running. Confirm load with visible bash output.
 
 | # | Check | Pass condition | HARD FAIL condition |
 |---|-------|---------------|---------------------|
+| 0 | gates_passed written to frontmatter | `gates_passed: YYYY-MM-DD` present in SKILL.md frontmatter; run the command below before packaging | Field absent after packaging command runs |
 | 1 | Filesystem install confirmed | `ls /mnt/skills/user/<skill-name>/` output visible this turn | Output absent or from a prior turn |
 | 2 | SKILL.md present in install path | File visible in ls output | SKILL.md missing from installed directory |
 | 3 | references/ present and populated | `ls /mnt/skills/user/<skill-name>/references/` shows ≥ 1 file | Directory absent or empty |
@@ -20,6 +21,26 @@ Load with `view` before running. Confirm load with visible bash output.
 | 9 | Registry written and verified | D1 re-query confirmed entry present (install/update) or absent (delete) | Query result absent or contradicts expected state |
 | 10 | present_files called with .skill | Tool called with correct path | Tool not called — user cannot download |
 | 11 | Gate 9 clean pass block present | Delivery block visible with all required fields | Block absent or incomplete |
+
+---
+
+## Check 0 — gates_passed Write Command
+
+```bash
+python3 -c "
+import re, datetime
+path = '/tmp/<skill-name>/SKILL.md'
+today = datetime.date.today().isoformat()
+content = open(path).read()
+if 'gates_passed:' in content:
+    content = re.sub(r'^gates_passed:.*$', f'gates_passed: {today}', content, flags=re.MULTILINE)
+else:
+    content = content.replace('---\nSKILL_VERSION', f'---\ngates_passed: {today}\nSKILL_VERSION', 1)
+open(path, 'w').write(content)
+print('gates_passed written:', today)
+"
+```
+Re-run Gate 7 after this write. CI WARNs if absent; becomes HARD FAIL after corpus sweep.
 
 ---
 

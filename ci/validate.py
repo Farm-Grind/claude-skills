@@ -85,6 +85,39 @@ def check_banned_arxiv(content: str) -> tuple[str, list[str]]:
     return ("FAIL" if hits else "PASS", hits)
 
 
+# ── Skill-publisher activation checks ────────────────────────────────────────
+
+def check_skill_version(content: str) -> tuple[str, str]:
+    """HARD FAIL: SKILL_VERSION must be present in the body.
+    Absence means the skill has never been through a gated publish.
+    """
+    if re.search(r"^SKILL_VERSION:", content, re.MULTILINE):
+        m = re.search(r"^SKILL_VERSION:\s*(.+)$", content, re.MULTILINE)
+        return ("PASS", m.group(1).strip() if m else "present")
+    return (
+        "FAIL",
+        "SKILL_VERSION missing — skill has not been through skill-publisher. "
+        "Run utility-skill-publisher and complete Gate 9 before pushing.",
+    )
+
+
+def check_gates_passed(content: str) -> tuple[str, str]:
+    """WARN: gates_passed frontmatter field must be present.
+    Written by skill-publisher Gate 9. Absence means the last publish
+    predates this enforcement rule.
+    Promote to HARD FAIL once corpus sweep is complete.
+    """
+    m = re.search(r"^gates_passed:\s*(.+)$", content, re.MULTILINE)
+    if m:
+        return ("PASS", f"gates_passed: {m.group(1).strip()}")
+    return (
+        "WARN",
+        "gates_passed field absent — skill-publisher has not written Gate 9 "
+        "metadata to this skill. Re-run skill-publisher to add it. "
+        "(Will become HARD FAIL after corpus sweep.)",
+    )
+
+
 # ── Failure-audit-rules.json static checks (VR-05, VR-11) ───────────────────
 # WARN-level: printed but do not increment fails / block CI.
 # Source: D1 claude-config / validation_rules. Synced via ci/sync-failure-rules.py.
@@ -195,6 +228,18 @@ def main() -> int:
         print(f"  trigger vocabulary: {warn}")
     for warn in check_project_scope_contamination(content):
         print(f"  scope contamination: {warn}")
+
+    # Skill-publisher activation checks
+    status, msg = check_skill_version(content)
+    if status == "FAIL":
+        fails += 1
+    print(f"  skill_version: {status} — {msg}")
+
+    status, msg = check_gates_passed(content)
+    if status == "WARN":
+        print(f"  gates_passed: WARN — {msg}")
+    else:
+        print(f"  gates_passed: {status} — {msg}")
 
     print("-" * 60)
     if fails:

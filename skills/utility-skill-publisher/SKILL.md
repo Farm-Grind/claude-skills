@@ -40,18 +40,18 @@ Failure modes Claude exhibits without this skill. This is why the skill exists.
 
 1. **Rationalizing "minor fix" to skip Gate 0** — every update feels minor; use the binary table.
 2. **Applying BEHAVIORAL ADDITIONs without user confirmation** — rules added "because they seem useful" measurably degrade task-specific performance; SkillReducer (arxiv 2603.29919) documents 38.5% body actionability loss from unconfirmed additions.
-3. **Reference file missing silently** — SKILL.md cites a file; Claude runs from memory; no error appears. Gate 8 existence check is the only structural prevention.
+3. **Reference file missing silently** — CI (validate.py) now catches this as HARD FAIL, but only at push time. Gate 8 catches it before push.
 4. **Running Gate 7 grep from a prior turn** — results go stale after any edit. Re-run after every edit batch.
 5. **Skipping Gate 8b under task load** — it's the last gate before packaging and the most likely to be dropped. Block is required in conversation before `present_files`.
 6. **Assuming reference files persist across turns** — they don't. Re-issue `view` at each step that needs a reference file. No view output = running from memory = HARD FAIL.
 7. **Adding gates to feel thorough** — gates that don't change Claude's behavior add overhead without value. Challenge 5 catches these.
 8. **Dispatcher without synthesis protocol** — intake classification and reference loading work, but output is concatenated per-domain sections (BALANCE FINDINGS: ... PSYCHOLOGY FINDINGS: ...) rather than one integrated answer. Fix: verify synthesis protocol step is present in body with explicit cross-domain conflict check before output.
-9. **Delivering to Skills UI instead of filesystem** — Skills UI only stores SKILL.md; reference files are silently dropped. Filesystem at `/mnt/skills/user/<skill-name>/` is the primary delivery target. .skill packaging is secondary (backup/sharing only). Never present a .skill file as delivery without first confirming filesystem install succeeded.
+9. **Delivering to Skills UI instead of filesystem** — Skills UI only stores SKILL.md; reference files are silently dropped. Filesystem at `/mnt/skills/user/<skill-name>/` is the primary delivery target.
 10. **Type-taxonomy escape hatch** — declaring `encoded-preference` or `capability-uplift` to avoid dispatcher body constraints. All skills are `Type: dispatcher`. Domain expertise in the body (not in a reference file) causes routing competition and parsing errors.
 11. **Domain expertise in body** — reference files cost zero tokens until loaded; skill bodies load in full on every trigger. Interleaving process and knowledge forces parsing-which-is-which before acting; that parsing introduces errors. Single-domain skills with no reference file always violate this.
 12. **Gates run internally but not surfaced** — gates execute but output blocks are not produced or hidden in reasoning. User cannot verify gates passed. Fix: every gate that executes must produce a visible named output block. No output = gate not verified = delivery cannot proceed.
 13. **Resource taxonomy under-considered** — corpus reality: zero skills use `scripts/`, `assets/`, or `evals/`. Some skills encode deterministic procedures as inline bash that belong in `scripts/`; some produce file artifacts that belong in `assets/`. Gate 2.5 forces explicit consideration of all four resource types.
-14. **Generalization failure** — body contains project-specific names, paths, schemas, or constants. Body must be a portable routing/synthesis skeleton; project-specific content lives in named references. Gate 5e sub-check.
+14. **Generalization failure** — body contains project-specific names. CI (VR-11) warns on this; Gate 5e is the pre-push catch.
 
 ---
 
@@ -383,8 +383,6 @@ Call present_files with the .skill path. User uploads via Skills UI to persist. 
 
 **Self-application rule:** When this skill's SKILL.md is edited, always run both steps and present the .skill file without being asked.
 
-**Packaging failure recovery:** (1) Confirm `SKILL.md` is at `/tmp/<skill-name>/SKILL.md`. (2) Run `wc -l` — must be ≤ 500. (3) Re-run Gate 7 greps. (4) Retry once; if still failing, verify script path and Python availability.
-
 ---
 
 ## GATE 8b — ADVERSARIAL SELF-REVIEW
@@ -427,6 +425,8 @@ Install/Update: INSERT OR REPLACE INTO skills (name,version,status,lines,updated
 Remove: DELETE FROM skills WHERE name = '<skill-name>'
 Verify: re-query — entry present (install/update) or absent (remove) — HARD FAIL if wrong
 ```
+**gates_passed write (HARD FAIL if skipped — runs on every create and update):**
+Write today's date to SKILL.md frontmatter before packaging. See `references/gate-8c-delivery.md` Check 0 for the exact command.
 
 | Skill state | Status |
 |---|---|
