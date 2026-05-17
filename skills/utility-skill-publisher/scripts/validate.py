@@ -28,6 +28,19 @@ GREP_CHECKS = [
     ("dated content",     r"before [0-9]\{4\}\|after [0-9]\{4\}"),
 ]
 
+# Structural presence checks — HARD FAIL if absent.
+# These catch cognitive omission of required body elements (Gate 3 / Gate 5).
+# Note: grep confirms string presence, not semantic correctness — a skill that
+# includes "Type: dispatcher" but puts domain expertise in the body still
+# violates 5d; that remains a self-assessed check.
+STRUCTURAL_CHECKS = [
+    ("type dispatcher",      r"^Type: dispatcher",               "HARD FAIL"),
+    ("gotchas section",      r"^## GOTCHAS",                     "HARD FAIL"),
+    ("skill version",        r"^SKILL_VERSION:",                 "HARD FAIL"),
+    ("use automatically",    r"Use automatically",               "HARD FAIL"),
+    ("reference reload",     r"do not persist across turns",     "HARD FAIL"),
+]
+
 
 def run_grep(label: str, pattern: str, path: Path) -> tuple[str, list[str]]:
     """Returns (status, matched_lines). status is 'PASS' or 'FAIL' or 'NOTE'.
@@ -113,6 +126,18 @@ def main() -> int:
     if status == "FAIL":
         fails += 1
     print(f"  line count: {status} — {msg}")
+
+    for label, pattern, severity in STRUCTURAL_CHECKS:
+        result = subprocess.run(
+            ["grep", "-n", pattern, str(path)],
+            capture_output=True, text=True
+        )
+        present = bool(result.stdout.strip())
+        if present:
+            print(f"  {label}: PASS")
+        else:
+            fails += 1
+            print(f"  {label}: FAIL — '{pattern}' absent from body ({severity})")
 
     print("-" * 60)
     if fails:

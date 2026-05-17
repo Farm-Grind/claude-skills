@@ -16,7 +16,8 @@ description: >
   unrelated to skill authoring (game ability design, lore writing, marketing
   copy). Load once per session.
 ---
-SKILL_VERSION: v3.3
+gates_passed: 2026-05-17
+SKILL_VERSION: v3.4
 
 # Skill Publisher — Quality Gate
 
@@ -49,7 +50,7 @@ Failure modes Claude exhibits without this skill. This is why the skill exists.
 9. **Delivering to Skills UI instead of filesystem** — Skills UI only stores SKILL.md; reference files are silently dropped. Filesystem at `/mnt/skills/user/<skill-name>/` is the primary delivery target.
 10. **Type-taxonomy escape hatch** — declaring `encoded-preference` or `capability-uplift` to avoid dispatcher body constraints. All skills are `Type: dispatcher`. Domain expertise in the body (not in a reference file) causes routing competition and parsing errors.
 11. **Domain expertise in body** — reference files cost zero tokens until loaded; skill bodies load in full on every trigger. Interleaving process and knowledge forces parsing-which-is-which before acting; that parsing introduces errors. Single-domain skills with no reference file always violate this.
-12. **Gates run internally but not surfaced** — gates execute but output blocks are not produced or hidden in reasoning. User cannot verify gates passed. Fix: every gate that executes must produce a visible named output block. No output = gate not verified = delivery cannot proceed.
+12. **Steps marked complete without executing** — gates run but produce no visible output block, or packaging runs but `present_files` is not called in the same response. Both are the same failure mode: step logged as done without the required artifact appearing. Fix: every gate produces a visible named output block; every packaging sequence ends with `present_files` firing in the same turn (see arxiv 2604.20911 in SEE ALSO).
 13. **Resource taxonomy under-considered** — corpus reality: zero skills use `scripts/`, `assets/`, or `evals/`. Some skills encode deterministic procedures as inline bash that belong in `scripts/`; some produce file artifacts that belong in `assets/`. Gate 2.5 forces explicit consideration of all four resource types.
 14. **Generalization failure** — body contains project-specific names. CI (VR-11) warns on this; Gate 5e is the pre-push catch.
 
@@ -332,7 +333,7 @@ Run after all edits are complete. Re-run after every edit batch before packaging
 python3 /mnt/skills/user/utility-skill-publisher/scripts/validate.py /tmp/<skill-name>/SKILL.md
 ```
 
-The validator runs all deterministic Gate 7 checks: 6 grep sweeps (blockquotes, hedged language, bad version refs, second-person voice, dated content; double-separator is informational), description char count (limit 1,024), name length (limit 64), and line count (target 400, hard limit 500).
+The validator runs all deterministic Gate 7 checks: 6 grep sweeps (blockquotes, hedged language, bad version refs, second-person voice, dated content; double-separator is informational), 5 structural presence checks (Type dispatcher, GOTCHAS, SKILL_VERSION, Use automatically, reference reload imperative), description char count (limit 1,024), name length (limit 64), and line count (target 400, hard limit 500).
 
 Exit code 0 means all checks pass. Exit code 1 means at least one FAIL. Fix before packaging.
 
@@ -372,14 +373,15 @@ ls /mnt/skills/user/<skill-name>/
 ```
 HARD FAIL: output must be visible before Step 2 runs.
 
-**Step 2 — Package and present (mandatory — required for persistence):**
-/mnt/skills/user/ resets at session start. The .skill upload is the ONLY persistent deployment path. Not optional.
+**Step 2 — Package, copy, and present (one atomic action):**
 ```bash
 cd /mnt/skills/examples/skill-creator
 python3 -m scripts.package_skill /tmp/<skill-name>/ /tmp/pkg-output/
 cp /tmp/pkg-output/<skill-name>.skill /mnt/user-data/outputs/
 ```
-Call present_files with the .skill path. User uploads via Skills UI to persist. Must return Skill is valid! — HARD FAIL otherwise.
+MUST call `present_files` with the .skill path immediately after cp — Step 2 is not complete until the `present_files` tool call appears in this response turn.
+HARD FAIL: packaging output does not contain `Skill is valid!`.
+HARD FAIL: `present_files` not called before Gate 8b begins.
 
 **Self-application rule:** When this skill's SKILL.md is edited, always run both steps and present the .skill file without being asked.
 
@@ -387,7 +389,7 @@ Call present_files with the .skill path. User uploads via Skills UI to persist. 
 
 ## GATE 8b — ADVERSARIAL SELF-REVIEW
 
-Load `references/gate-8b-challenges.md` before running any challenge. Confirm the file loaded with visible bash output — no output = running from memory = HARD FAIL. `present_files` and Gate 9 MUST NOT execute until the confirmation block is visible.
+Load `references/gate-8b-challenges.md` before running any challenge. Confirm load by quoting the file's H1 verbatim: `# Gate 8b — Adversarial Self-Review Challenges` must appear in the response — cannot be produced from memory without loading the file. `present_files` and Gate 9 MUST NOT execute until the confirmation block is visible.
 
 **Confirmation block (must appear before present_files):**
 ```
@@ -440,7 +442,6 @@ Write today's date to SKILL.md frontmatter before packaging. See `references/gat
 Changes  N: [verb: what changed]
 FixType  [STRUCTURAL FIX: failure mode / BEHAVIORAL ADDITION: confirmed by user on [date]]
 Gates    all passed
-Done     written  verified  packaged  registry  present_files
 [Next    adversarial review required to promote to INSTALLED]  STAGED only
 [Redirect  [content] to [destination]]  Gate 0.5 misroutes only
 ```
@@ -452,17 +453,13 @@ GATE [N]  [gate name] — [reason <= 5 words]
 Action  [what to fix and where]
 ```
 
-**Rules:** `Changes` — count first, verb-first one-liner per fix. `FixType` — required whenever changes were made. `Done` — confirmed or not completed; any not completed = FAIL line above. Registry write failure: retry once; if still failing, mark registry not completed, record intended update in fenced block for next session.
+**Rules:** `Changes` — count first, verb-first one-liner per fix. `FixType` — required whenever changes were made. Registry write failure: retry once; if still failing, mark registry not completed, record intended update in fenced block for next session.
 
 ---
 
 ## Examples
 
-Seven worked examples covering common scenarios (new single-domain
-dispatcher, gate added to INSTALLED skill, description trim, BEHAVIORAL
-ADDITION blocked, new multi-domain dispatcher, body content violation,
-resource routed to scripts/) are in `references/examples.md`. Load when
-designing or auditing a skill against the gate sequence.
+Seven worked examples (new single-domain dispatcher, gate added to INSTALLED skill, description trim, BEHAVIORAL ADDITION blocked, new multi-domain dispatcher, body content violation, resource routed to scripts/) are in `references/examples.md`. Load when designing or auditing a skill against the gate sequence.
 
 ---
 
@@ -497,4 +494,5 @@ This skill does NOT:
 | Trace2Skill — Distill Trajectory-Local Lessons into Transferable Agent Skills | arxiv 2603.25158 — skill fragmentation anti-pattern |
 | MindStudio — Claude Code Skills Architecture | https://www.mindstudio.ai/blog/claude-code-skills-architecture-skill-md-reference-files |
 | MindStudio — Code Scripts vs Markdown Instructions | https://www.mindstudio.ai/blog/claude-code-skills-code-scripts-vs-markdown-instructions — when to use scripts |
+| Omission vs Commission Constraints — arxiv 2604.20911 | Basis for Gate 8 Step 2 collapse — commission holds 100% vs omission 33-73% under context load |
 | Dotzlaw — Reusable Knowledge Packages | https://www.dotzlaw.com/insights/claude-skills/ — 3-tier progressive disclosure |
