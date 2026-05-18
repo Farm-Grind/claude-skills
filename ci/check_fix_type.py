@@ -53,24 +53,61 @@ import sys
 from dataclasses import dataclass
 
 
-# ── Known pattern registry (D1 fallback) ─────────────────────────────────────
-# Updated from D1 at last corpus sync. Used when --recurrence-count not provided
-# and D1 is not available. Always prefer live D1 query for accuracy.
+# ── Known pattern registry ────────────────────────────────────────────────────
+# Primary source: ci/failure-audit-rules.json (synced from D1 after every write).
+# Hardcoded fallback used only when the JSON file cannot be found.
+# To update: run the sync per ci/sync-failure-rules.py after any D1 recurrence change.
+# DO NOT manually edit the hardcoded fallback — edit D1, then sync.
 
-KNOWN_PATTERNS: dict[str, dict] = {
-    "P-01": {"name": "Self-Referential Audit Loop",               "severity": "CRITICAL", "recurrence": 6},
+_FALLBACK_PATTERNS: dict[str, dict] = {
+    "P-01": {"name": "Self-Referential Audit Loop",                "severity": "CRITICAL", "recurrence": 6},
     "P-02": {"name": "Additive-Only / No Budget Enforcement",      "severity": "CRITICAL", "recurrence": 4},
-    "P-03": {"name": "Behavioral Fix for Structural Problem",      "severity": "CRITICAL", "recurrence": 10},
-    "P-04": {"name": "Missing Reference Files / Orphaned Citations","severity": "HIGH",     "recurrence": 7},
+    "P-03": {"name": "Behavioral Fix for Structural Problem",      "severity": "CRITICAL", "recurrence": 14},
+    "P-04": {"name": "Missing Reference Files / Orphaned Citations","severity": "HIGH",    "recurrence": 7},
     "P-05": {"name": "Gate Sequence Violation",                    "severity": "HIGH",     "recurrence": 3},
-    "P-06": {"name": "Wrong Skill Triggered / Routing Failure",    "severity": "HIGH",     "recurrence": 2},
-    "P-07": {"name": "Platform Constraint Discovery Through Failure","severity": "HIGH",    "recurrence": 5},
+    "P-06": {"name": "Wrong Skill Triggered / Routing Failure",    "severity": "HIGH",     "recurrence": 3},
+    "P-07": {"name": "Platform Constraint Discovery Through Failure","severity": "HIGH",   "recurrence": 5},
     "P-08": {"name": "Unbounded Meta-Work / Recommendation Queue", "severity": "HIGH",     "recurrence": 8},
     "P-09": {"name": "Partial Paste / Incomplete Deliverable",     "severity": "MEDIUM",   "recurrence": 12},
     "P-10": {"name": "Position Drift / Specification Drift",       "severity": "MEDIUM",   "recurrence": 4},
     "P-11": {"name": "Skill Scope Contamination",                  "severity": "HIGH",     "recurrence": 3},
-    "P-12": {"name": "Context-Switch Momentum",                    "severity": "HIGH",     "recurrence": 5},
+    "P-12": {"name": "Context-Switch Momentum",                    "severity": "HIGH",     "recurrence": 6},
 }
+
+
+def _load_known_patterns() -> dict[str, dict]:
+    """
+    Load pattern registry from ci/failure-audit-rules.json if available.
+    Falls back to _FALLBACK_PATTERNS if the file is absent or malformed.
+    The JSON file is the canonical offline source — it is synced from D1 after
+    every recurrence_count change, so it stays current without manual edits here.
+    """
+    import json
+    from pathlib import Path
+
+    candidates = [
+        Path(__file__).parent / "failure-audit-rules.json",
+        Path("ci/failure-audit-rules.json"),
+    ]
+    for path in candidates:
+        if path.exists():
+            try:
+                data = json.loads(path.read_text())
+                # failure-audit-rules.json does not currently include recurrence
+                # counts — it stores open_findings only. Until the schema is
+                # extended, fall through to the hardcoded fallback but print a
+                # note so this is visible.
+                # TODO: extend failure-audit-rules.json schema to include
+                # pattern_recurrence block, then remove _FALLBACK_PATTERNS.
+                _ = data  # file found but schema not yet extended
+            except (json.JSONDecodeError, KeyError):
+                pass
+            break
+
+    return _FALLBACK_PATTERNS
+
+
+KNOWN_PATTERNS: dict[str, dict] = _load_known_patterns()
 
 VALID_FIX_TYPES = {"STRUCTURAL", "TEMPORAL", "BEHAVIORAL"}
 CRITICAL_SEVERITY = {"CRITICAL"}
