@@ -5,7 +5,7 @@
     "last_synced": "2026-05-18",
     "description": "Static CI mirror of failure audit validation rules. Do not edit manually \u2014 sync from D1 when rules change. See ci/sync-failure-rules.py for the sync command.",
     "total_patterns": 15,
-    "total_findings": 44
+    "total_findings": 48
   },
   "static_checks": [
     {
@@ -181,6 +181,13 @@
       "pattern_code": "P-12",
       "title": "Direct str_replace on SKILL.md bypassed skill-publisher gate entirely",
       "artifact_affected": "utility-skill-publisher/SKILL.md \u2014 activation trigger gap",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-048",
+      "pattern_code": "P-15",
+      "title": "P-15 (CI) pattern confirmed by DriftBench research \u2014 no specific session instance found in history",
+      "artifact_affected": "user preferences A6; output-quality-gate B9 (scope check); any session with iterative refinement",
       "project_scope": "UNIVERSAL"
     }
   ],
