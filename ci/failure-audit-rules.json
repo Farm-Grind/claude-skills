@@ -135,41 +135,6 @@
   ],
   "open_findings": [
     {
-      "finding_id": "F-020",
-      "pattern_code": "P-10",
-      "title": "skill-publisher self-update: position reversed on reference-file mandate under clarifying question",
-      "artifact_affected": "utility-skill-publisher/SKILL.md Gate 6",
-      "project_scope": "UNIVERSAL"
-    },
-    {
-      "finding_id": "F-025",
-      "pattern_code": "P-10",
-      "title": "confident incorrect statement about content in context: \"Claude cannot install skills\"",
-      "artifact_affected": "output-quality-gate/SKILL.md (Sub-check A)",
-      "project_scope": "UNIVERSAL"
-    },
-    {
-      "finding_id": "F-027",
-      "pattern_code": "P-07",
-      "title": "Cloudflare D1 handoff write may fail when session budget exhausted at HANDOFF ALERT",
-      "artifact_affected": "utility-core-session-monitor/SKILL.md close-out protocol \u2014 D1 write step",
-      "project_scope": "UNIVERSAL"
-    },
-    {
-      "finding_id": "F-035",
-      "pattern_code": "P-12",
-      "title": "Direct str_replace on SKILL.md bypassed skill-publisher gate entirely",
-      "artifact_affected": "utility-skill-publisher/SKILL.md \u2014 activation trigger gap",
-      "project_scope": "UNIVERSAL"
-    },
-    {
-      "finding_id": "F-036",
-      "pattern_code": "P-06",
-      "title": "Skill invoked as facsimile \u2014 output produced without loading SKILL.md or reference files",
-      "artifact_affected": "utility-skill-publisher \u2014 routing verification gap; /mnt/skills/user/ write path",
-      "project_scope": "UNIVERSAL"
-    },
-    {
       "finding_id": "F-037",
       "pattern_code": "P-03",
       "title": "All 3 proposed enforcement rules are BEHAVIORAL \u2014 wrong fix category for recurring process bypass",
@@ -195,6 +160,27 @@
       "pattern_code": "P-03",
       "title": "Git hook stated as addressing trainer session F1 without verifying failure path",
       "artifact_affected": "Option A \u2014 git pre-commit hook; ci/pre-commit hook (installed this session)",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-036",
+      "pattern_code": "P-06",
+      "title": "Skill invoked as facsimile \u2014 output produced without loading SKILL.md or reference files",
+      "artifact_affected": "utility-skill-publisher \u2014 routing verification gap; /mnt/skills/user/ write path",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-027",
+      "pattern_code": "P-07",
+      "title": "Cloudflare D1 handoff write may fail when session budget exhausted at HANDOFF ALERT",
+      "artifact_affected": "utility-core-session-monitor/SKILL.md close-out protocol \u2014 D1 write step",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-035",
+      "pattern_code": "P-12",
+      "title": "Direct str_replace on SKILL.md bypassed skill-publisher gate entirely",
+      "artifact_affected": "utility-skill-publisher/SKILL.md \u2014 activation trigger gap",
       "project_scope": "UNIVERSAL"
     }
   ],
