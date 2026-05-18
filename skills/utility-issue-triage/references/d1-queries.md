@@ -126,6 +126,7 @@ VALUES
   ('F-XXX', 'P-XX', 'Short title', 'https://claude.ai/chat/...', 'Symptom: what wrong output looked like',
    'Root cause: mechanism not symptom', NULL, 'STRUCTURAL', 'OPEN', 'skill or file affected', 'UNIVERSAL')
 ```
+⚠ **SYNC TRIGGER** — run Step 4 (CI sync) after this write.
 
 **UPDATE finding to RESOLVED:**
 ```sql
@@ -133,6 +134,7 @@ UPDATE granular_findings
 SET status = 'RESOLVED', fix_applied = 'What was done', fix_type = 'STRUCTURAL'
 WHERE finding_id = 'F-XXX'
 ```
+⚠ **SYNC TRIGGER** — run Step 4 (CI sync) after this write.
 
 **Increment pattern recurrence count:**
 ```sql
@@ -140,6 +142,7 @@ UPDATE failure_patterns
 SET recurrence_count = recurrence_count + 1, updated_at = datetime('now')
 WHERE pattern_code = 'P-XX'
 ```
+⚠ **SYNC TRIGGER** — run Step 4 (CI sync) after this write.
 
 **Get current OPEN findings (for CI JSON sync):**
 ```sql
@@ -166,4 +169,7 @@ Pattern code mapping (use closest match):
 - P-10 Position drift / specification drift
 - P-11 Skill scope contamination
 - P-12 Context-switch momentum overrides procedural gates
+- P-13 Context compression loss (long-context rule degradation)
+- P-14 Tool write without verification (write without read-back confirm)
+- P-15 Complexity inflation under iterative pressure
 
