@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# pre-commit hook — Farm-Grind/claude-skills
+# Runs scope inflation gate and corpus ceiling check before every commit.
+# Install: git config core.hooksPath .githooks
+
+set -e
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+EXIT=0
+
+# ── Scope inflation gate (P-15 STRUCTURAL fix) ────────────────────────────────
+# Only fires when ci/scope-active.json exists (manifested tasks).
+# WARN (exit 2) when no manifest — allows unmanifested commits through.
+if python3 ci/check_scope_inflation.py --check --staged; then
+    : # PASS
+else
+    CODE=$?
+    if [ "$CODE" -eq 1 ]; then
+        echo ""
+        echo "COMMIT BLOCKED — scope inflation gate FAIL (P-15)"
+        echo "  Revert out-of-scope changes or re-declare scope with --init."
+        EXIT=1
+    fi
+    # exit 2 (WARN / no manifest) — allow through
+fi
+
+# ── Corpus ceiling check ──────────────────────────────────────────────────────
+if python3 ci/check_ceiling.py; then
+    : # PASS
+else
+    echo ""
+    echo "COMMIT BLOCKED — corpus ceiling exceeded"
+    EXIT=1
+fi
+
+exit $EXIT

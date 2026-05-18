@@ -69,12 +69,17 @@ Each layer catches failures that the layer above misses.
 are unresolved. Prevents audit debt accumulation.
 
 ### Layer 2 — Execution Gates
-**Scripts:** ci/check_fix_type.py, ci/validate_research.py, ci/validate_constraints.py  
-**When:** During fix proposal and research validation  
+**Scripts:** ci/check_fix_type.py, ci/validate_research.py, ci/validate_constraints.py, ci/check_scope_inflation.py  
+**When:** During fix proposal, research validation, and task execution  
 **What they do:**
 - check_fix_type.py: rejects BEHAVIORAL fixes for recurring patterns (recurrence > 1)
 - validate_research.py: enforces research requirements before skill packaging
 - validate_constraints.py: verifies corpus ceiling and constraint compliance
+- check_scope_inflation.py: STRUCTURAL fix for P-15 (Complexity Inflation). Declares task scope
+  as a manifest before work starts; validates git diff against manifest at commit time.
+  Out-of-scope file changes → FAIL → commit blocked via pre-commit hook.
+  Usage: `--init --task "..." --files "a,b"` before work; `--check --staged` to validate.
+  Manifest lives at ci/scope-active.json (gitignored).
 
 ### Layer 3 — Delivery Gates
 **Scripts:** ci/validate_handoff.py, ci/validate.py  
@@ -91,10 +96,11 @@ are unresolved. Prevents audit debt accumulation.
 See ci/OPERATING-PROCEDURES.md PROC-04 for sync gate procedure and PROC-05 for force-push gap.
 
 ### Layer 5 — Repo Integrity
-**Scripts:** pre-commit hook, ci/check_ceiling.py  
-**When:** Every commit  
-**What it does:** Validates that no skill exceeds the corpus ceiling, no forbidden patterns
-are introduced, and the repo JSON is consistent.
+**Scripts:** .githooks/pre-commit, ci/check_ceiling.py, ci/check_scope_inflation.py  
+**When:** Every commit (pre-commit hook)  
+**Config:** `git config core.hooksPath .githooks` (set at clone time or once per session)  
+**What it does:** Runs scope inflation gate (SCI-00–03) if ci/scope-active.json exists;
+runs corpus ceiling check on every commit. Commit blocked on scope violation or ceiling breach.
 
 ---
 
