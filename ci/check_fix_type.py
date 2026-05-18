@@ -55,32 +55,17 @@ from dataclasses import dataclass
 
 # ── Known pattern registry ────────────────────────────────────────────────────
 # Primary source: ci/failure-audit-rules.json (synced from D1 after every write).
-# Hardcoded fallback used only when the JSON file cannot be found.
-# To update: run the sync per ci/sync-failure-rules.py after any D1 recurrence change.
-# DO NOT manually edit the hardcoded fallback — edit D1, then sync.
-
-_FALLBACK_PATTERNS: dict[str, dict] = {
-    "P-01": {"name": "Self-Referential Audit Loop",                "severity": "CRITICAL", "recurrence": 6},
-    "P-02": {"name": "Additive-Only / No Budget Enforcement",      "severity": "CRITICAL", "recurrence": 4},
-    "P-03": {"name": "Behavioral Fix for Structural Problem",      "severity": "CRITICAL", "recurrence": 14},
-    "P-04": {"name": "Missing Reference Files / Orphaned Citations","severity": "HIGH",    "recurrence": 7},
-    "P-05": {"name": "Gate Sequence Violation",                    "severity": "HIGH",     "recurrence": 3},
-    "P-06": {"name": "Wrong Skill Triggered / Routing Failure",    "severity": "HIGH",     "recurrence": 3},
-    "P-07": {"name": "Platform Constraint Discovery Through Failure","severity": "HIGH",   "recurrence": 5},
-    "P-08": {"name": "Unbounded Meta-Work / Recommendation Queue", "severity": "HIGH",     "recurrence": 8},
-    "P-09": {"name": "Partial Paste / Incomplete Deliverable",     "severity": "MEDIUM",   "recurrence": 12},
-    "P-10": {"name": "Position Drift / Specification Drift",       "severity": "MEDIUM",   "recurrence": 4},
-    "P-11": {"name": "Skill Scope Contamination",                  "severity": "HIGH",     "recurrence": 3},
-    "P-12": {"name": "Context-Switch Momentum",                    "severity": "HIGH",     "recurrence": 6},
-}
-
-
 def _load_known_patterns() -> dict[str, dict]:
     """
-    Load pattern registry from ci/failure-audit-rules.json if available.
-    Falls back to _FALLBACK_PATTERNS if the file is absent or malformed.
-    The JSON file is the canonical offline source — it is synced from D1 after
-    every recurrence_count change, so it stays current without manual edits here.
+    Load pattern registry from ci/failure-audit-rules.json.
+
+    Reads from the "patterns" section (full metadata: name, severity, recurrence_count)
+    added in the 2026-05-18 schema extension. Falls back to pattern_recurrence-only
+    if the patterns section is absent (pre-extension JSON).
+
+    failure-audit-rules.json is the canonical offline source — synced from D1 after
+    every recurrence_count change or pattern INSERT via ci/sync-failure-rules.py.
+    No hardcoded fallback dict.
     """
     import json
     from pathlib import Path
@@ -90,21 +75,53 @@ def _load_known_patterns() -> dict[str, dict]:
         Path("ci/failure-audit-rules.json"),
     ]
     for path in candidates:
-        if path.exists():
-            try:
-                data = json.loads(path.read_text())
-                # failure-audit-rules.json does not currently include recurrence
-                # counts — it stores open_findings only. Until the schema is
-                # extended, fall through to the hardcoded fallback but print a
-                # note so this is visible.
-                # TODO: extend failure-audit-rules.json schema to include
-                # pattern_recurrence block, then remove _FALLBACK_PATTERNS.
-                _ = data  # file found but schema not yet extended
-            except (json.JSONDecodeError, KeyError):
-                pass
-            break
+        if not path.exists():
+            continue
+        try:
+            data = json.loads(path.read_text())
 
-    return _FALLBACK_PATTERNS
+            # Primary path: "patterns" section with full metadata
+            patterns_list = data.get("patterns", [])
+            if patterns_list:
+                out = {}
+                for row in patterns_list:
+                    code = row["pattern_code"]
+                    out[code] = {
+                        "name": row.get("name", code),
+                        "severity": row.get("severity", "UNKNOWN"),
+                        "recurrence": row.get("recurrence_count", 0),
+                    }
+                return out
+
+            # Fallback path: pattern_recurrence only (pre-2026-05-18 schema)
+            recurrence = data.get("pattern_recurrence", {})
+            if recurrence:
+                print(
+                    "WARNING: failure-audit-rules.json has pattern_recurrence but not patterns section. "
+                    "Re-run sync to get full metadata: python3 ci/sync-failure-rules.py ...",
+                    file=__import__("sys").stderr,
+                )
+                out = {}
+                for code, count in recurrence.items():
+                    out[code] = {"name": code, "severity": "UNKNOWN", "recurrence": count}
+                return out
+
+            print(
+                "WARNING: failure-audit-rules.json found but missing both 'patterns' and "
+                "'pattern_recurrence' blocks. Run: python3 ci/sync-failure-rules.py ...",
+                file=__import__("sys").stderr,
+            )
+            return {}
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"WARNING: could not parse {path}: {e}", file=__import__("sys").stderr)
+            return {}
+
+    print(
+        "WARNING: ci/failure-audit-rules.json not found. "
+        "Run sync to generate it before using check_fix_type.py.",
+        file=__import__("sys").stderr,
+    )
+    return {}
 
 
 KNOWN_PATTERNS: dict[str, dict] = _load_known_patterns()

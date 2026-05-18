@@ -314,34 +314,38 @@ Repo path: /home/claude/cs-work/ci/ (clone if absent — see PART 0 gate above).
 
 **Step 3 — INSERT each new finding:**
 Load `references/d1-queries.md` §Failure Audit INSERT. Execute for every finding produced in PART 3. Map fields:
-- `pattern_code` — from failure taxonomy P-01 through P-12 (closest match; use P-12 if context-switch, P-03 if behavioral/self-attestation, P-09 if partial output, P-10 if position/spec drift)
+- `pattern_code` — from failure taxonomy P-01 through P-15 (closest match; use P-12 if context-switch, P-03 if behavioral/self-attestation, P-09 if partial output, P-10 if position/spec drift, P-13 if long-context rule degradation, P-14 if tool write without read-back verify, P-15 if complexity inflation under pressure)
 - `fix_type` — from Fix Quality Gate output (STRUCTURAL / TEMPORAL / BEHAVIORAL)
 - `status` — always OPEN on insert; only Claude that resolves it sets RESOLVED
 - `project_scope` — UNIVERSAL unless finding is demonstrably project-specific (name the project)
 - `source_conversation` — current conversation URL if known; else NULL
 
 **Step 4 — Sync CI:**
-Query D1 for PAT (see d1-queries.md §Failure Audit INSERT "Get PAT for CI sync"), then execute:
+Query D1 for PAT (see d1-queries.md §Failure Audit INSERT "Get PAT for CI sync"), clone if absent, then execute:
 ```bash
-cd /home/claude/cs-push
-git pull origin main
-# Update only the open_findings array in ci/failure-audit-rules.json:
-python3 - << 'EOF'
-import json
-from pathlib import Path
-# Findings list comes from Step 4 D1 query result — substitute actual rows below
-open_findings = []  # populated from D1 query output
-p = Path("ci/failure-audit-rules.json")
-data = json.loads(p.read_text())
-data["open_findings"] = open_findings
-data["_meta"]["last_synced"] = "YYYY-MM-DD"  # today's date
-p.write_text(json.dumps(data, indent=2))
-EOF
-git add ci/failure-audit-rules.json
-git commit -m "sync: failure audit findings [F-XXX added]"
-git push origin main
+# Repo must be at /home/claude/cs-work (clone if absent)
+cd /home/claude/cs-work
+git checkout main && git pull origin main
+
+# Save D1 query results to temp files first (via Cloudflare MCP):
+#   SELECT pattern_code, name, severity, recurrence_count FROM failure_patterns ORDER BY pattern_code
+#   → /tmp/patterns.json
+#   SELECT finding_id, pattern_code, title, artifact_affected, project_scope
+#   FROM granular_findings WHERE status='OPEN' ORDER BY pattern_code, finding_id
+#   → /tmp/open_findings.json
+#   SELECT COUNT(*) as total FROM granular_findings → note the number
+
+# Run the sync script (commits to sync/* branch, pushes):
+python3 ci/sync-failure-rules.py \
+  --patterns /tmp/patterns.json \
+  --open-findings /tmp/open_findings.json \
+  --total-findings <COUNT> \
+  --last-synced $(date +%Y-%m-%d) \
+  --commit --push
 ```
-HARD FAIL: if git push fails, emit the updated open_findings JSON as a fenced block for the next connected session.
+The script creates branch `sync/failure-audit-YYYY-MM-DD` and pushes. Open a PR to merge into main.
+HARD FAIL: if git push fails, the script emits an error — emit the updated open_findings JSON as a fenced block for the next connected session.
+Do NOT push directly to main — main is protected; direct pushes will silently fail.
 
 **Step 5 — Report in diagnostic output:**
 Append to the Log line: `[N findings written to claude-config granular_findings: F-XXX, F-YYY]`

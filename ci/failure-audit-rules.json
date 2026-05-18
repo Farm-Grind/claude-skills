@@ -3,9 +3,9 @@
     "source": "D1 claude-config / validation_rules",
     "database_id": "afd78e0e-583e-4e78-87fc-dd6bc8150ce9",
     "last_synced": "2026-05-18",
-    "description": "Static CI mirror of failure audit validation rules. Do not edit manually — sync from D1 when rules change. See ci/sync-failure-rules.py for the sync command.",
-    "total_patterns": 12,
-    "total_findings": 42
+    "description": "Static CI mirror of failure audit validation rules. Do not edit manually \u2014 sync from D1 when rules change. See ci/sync-failure-rules.py for the sync command.",
+    "total_patterns": 15,
+    "total_findings": 44
   },
   "static_checks": [
     {
@@ -13,7 +13,9 @@
       "applies_to": "skill",
       "check_id": "missing_reference_files",
       "description": "Every references/*.md cited in SKILL.md must exist on disk",
-      "linked_patterns": ["P-04"],
+      "linked_patterns": [
+        "P-04"
+      ],
       "severity": "HARD_FAIL",
       "implementation": "Already in validate.py check_reference_files()"
     },
@@ -22,7 +24,9 @@
       "applies_to": "skill",
       "check_id": "line_count_ceiling",
       "description": "SKILL.md must be <= 500 lines",
-      "linked_patterns": ["P-02"],
+      "linked_patterns": [
+        "P-02"
+      ],
       "severity": "HARD_FAIL",
       "implementation": "Already in validate.py line count check"
     },
@@ -31,7 +35,9 @@
       "applies_to": "skill",
       "check_id": "banned_arxiv_ids",
       "description": "No line may cite arxiv 2605.06445 or arxiv 2601.22025",
-      "linked_patterns": ["P-04"],
+      "linked_patterns": [
+        "P-04"
+      ],
       "severity": "HARD_FAIL",
       "implementation": "Already in validate.py GREP_CHECKS"
     },
@@ -40,7 +46,9 @@
       "applies_to": "skill",
       "check_id": "trigger_vocabulary_coverage",
       "description": "Trigger description must not exclude valid request types via overly narrow example vocabulary. Check: description must not contain 'software = out of scope' or equivalent blanket exclusions for consumer-relevant domains.",
-      "linked_patterns": ["P-06"],
+      "linked_patterns": [
+        "P-06"
+      ],
       "severity": "WARN",
       "implementation": "grep_check: pattern='software.*out of scope|exclude.*software|no.*app.*recommendation', check_description=True"
     },
@@ -49,7 +57,9 @@
       "applies_to": "skill",
       "check_id": "no_project_specific_content_in_body",
       "description": "SKILL.md body must not contain project-specific proper nouns (Loop, Glowmoon, etc.) except in the NOT-triggers or SEE ALSO sections. Project-specific content belongs in references/ files.",
-      "linked_patterns": ["P-11"],
+      "linked_patterns": [
+        "P-11"
+      ],
       "severity": "WARN",
       "implementation": "grep_check: pattern='The Loop|Glowmoon|Farm-Grind', scope=body_only, exclude_sections=['NOT','SEE ALSO','Out of Scope']"
     },
@@ -58,7 +68,9 @@
       "applies_to": "skill",
       "check_id": "self_application_rule_present",
       "description": "Any skill that packages or validates other skills must contain a self-application rule stating the process applies to itself. Check for: 'including.*itself' or 'self-application' in body.",
-      "linked_patterns": ["P-03"],
+      "linked_patterns": [
+        "P-03"
+      ],
       "severity": "WARN",
       "implementation": "grep_check: pattern='including.*itself|self.application', applies_to_skills=['utility-skill-publisher']"
     }
@@ -68,43 +80,57 @@
       "rule_id": "VR-03",
       "applies_to": "skill_update_sessions",
       "description": "Every change must be classified STRUCTURAL/TEMPORAL/BEHAVIORAL before implementation. BEHAVIORAL requires user confirmation.",
-      "linked_patterns": ["P-03", "P-10"],
-      "enforcement": "SESSION_LEVEL — cannot be enforced by static CI; enforced via skill-publisher Gate 0.5"
+      "linked_patterns": [
+        "P-03",
+        "P-10"
+      ],
+      "enforcement": "SESSION_LEVEL \u2014 cannot be enforced by static CI; enforced via skill-publisher Gate 0.5"
     },
     {
       "rule_id": "VR-06",
       "applies_to": "user_pref_update_sessions",
-      "description": "For any recurring failure: BEHAVIORAL fix is insufficient — must escalate to STRUCTURAL or TEMPORAL.",
-      "linked_patterns": ["P-03"],
+      "description": "For any recurring failure: BEHAVIORAL fix is insufficient \u2014 must escalate to STRUCTURAL or TEMPORAL.",
+      "linked_patterns": [
+        "P-03"
+      ],
       "enforcement": "SESSION_LEVEL"
     },
     {
       "rule_id": "VR-07",
       "applies_to": "audit_requests",
       "description": "Any audit/review of Claude systems must identify an external (non-Claude) judgment node. If none exists, scope to a bounded deliverable with a checkable exit code.",
-      "linked_patterns": ["P-01", "P-08"],
+      "linked_patterns": [
+        "P-01",
+        "P-08"
+      ],
       "enforcement": "SESSION_LEVEL"
     },
     {
       "rule_id": "VR-08",
       "applies_to": "infrastructure_build_sessions",
       "description": "Establish platform constraints empirically before building. Do not discover constraints through failure.",
-      "linked_patterns": ["P-07"],
+      "linked_patterns": [
+        "P-07"
+      ],
       "enforcement": "SESSION_LEVEL"
     },
     {
       "rule_id": "VR-09",
       "applies_to": "project_instruction_updates",
       "description": "Check total instruction length vs ~15-rule envelope. Any addition without removal increases compliance decay.",
-      "linked_patterns": ["P-02"],
+      "linked_patterns": [
+        "P-02"
+      ],
       "enforcement": "SESSION_LEVEL"
     },
     {
       "rule_id": "VR-10",
       "applies_to": "all_deliverables",
       "description": "Any content user must copy/paste/act on: complete self-contained fenced code block, no truncation, handoff last.",
-      "linked_patterns": ["P-09"],
-      "enforcement": "SESSION_LEVEL — enforced via user preferences A7"
+      "linked_patterns": [
+        "P-09"
+      ],
+      "enforcement": "SESSION_LEVEL \u2014 enforced via user preferences A7"
     }
   ],
   "open_findings": [
@@ -126,50 +152,159 @@
       "finding_id": "F-027",
       "pattern_code": "P-07",
       "title": "Cloudflare D1 handoff write may fail when session budget exhausted at HANDOFF ALERT",
-      "artifact_affected": "utility-core-session-monitor/SKILL.md close-out protocol — D1 write step",
+      "artifact_affected": "utility-core-session-monitor/SKILL.md close-out protocol \u2014 D1 write step",
       "project_scope": "UNIVERSAL"
     },
     {
       "finding_id": "F-035",
       "pattern_code": "P-12",
       "title": "Direct str_replace on SKILL.md bypassed skill-publisher gate entirely",
-      "artifact_affected": "utility-skill-publisher/SKILL.md — activation trigger gap",
+      "artifact_affected": "utility-skill-publisher/SKILL.md \u2014 activation trigger gap",
       "project_scope": "UNIVERSAL"
     },
     {
       "finding_id": "F-036",
       "pattern_code": "P-06",
-      "title": "Skill invoked as facsimile — output produced without loading SKILL.md or reference files",
-      "artifact_affected": "utility-skill-publisher — routing verification gap; /mnt/skills/user/ write path",
+      "title": "Skill invoked as facsimile \u2014 output produced without loading SKILL.md or reference files",
+      "artifact_affected": "utility-skill-publisher \u2014 routing verification gap; /mnt/skills/user/ write path",
       "project_scope": "UNIVERSAL"
     },
     {
       "finding_id": "F-037",
       "pattern_code": "P-03",
-      "title": "All 3 proposed enforcement rules are BEHAVIORAL — wrong fix category for recurring process bypass",
-      "artifact_affected": "spec-process-enforcement-draft.md — all 3 proposed rules; user preferences draft",
+      "title": "All 3 proposed enforcement rules are BEHAVIORAL \u2014 wrong fix category for recurring process bypass",
+      "artifact_affected": "spec-process-enforcement-draft.md \u2014 all 3 proposed rules; user preferences draft",
       "project_scope": "UNIVERSAL"
     },
     {
       "finding_id": "F-038",
       "pattern_code": "P-03",
       "title": "validate-confirmation.py proposed as structural fix without mechanism analysis",
-      "artifact_affected": "spec-process-enforcement-draft.md — validate-confirmation.py proposal",
+      "artifact_affected": "spec-process-enforcement-draft.md \u2014 validate-confirmation.py proposal",
       "project_scope": "UNIVERSAL"
     },
     {
       "finding_id": "F-039",
       "pattern_code": "P-03",
       "title": "MCP R2 skill storage proposed without checking existing failure record",
-      "artifact_affected": "Option C in enforcement options analysis — MCP write gate with R2 storage",
+      "artifact_affected": "Option C in enforcement options analysis \u2014 MCP write gate with R2 storage",
       "project_scope": "UNIVERSAL"
     },
     {
       "finding_id": "F-040",
       "pattern_code": "P-03",
       "title": "Git hook stated as addressing trainer session F1 without verifying failure path",
-      "artifact_affected": "Option A — git pre-commit hook; ci/pre-commit hook (installed this session)",
+      "artifact_affected": "Option A \u2014 git pre-commit hook; ci/pre-commit hook (installed this session)",
       "project_scope": "UNIVERSAL"
+    }
+  ],
+  "pattern_recurrence": {
+    "P-01": 6,
+    "P-02": 4,
+    "P-03": 14,
+    "P-04": 7,
+    "P-05": 5,
+    "P-06": 3,
+    "P-07": 5,
+    "P-08": 8,
+    "P-09": 12,
+    "P-10": 4,
+    "P-11": 3,
+    "P-12": 6,
+    "P-13": 1,
+    "P-14": 1,
+    "P-15": 1
+  },
+  "patterns": [
+    {
+      "pattern_code": "P-01",
+      "name": "Self-Referential Audit Loop",
+      "severity": "CRITICAL",
+      "recurrence_count": 6
+    },
+    {
+      "pattern_code": "P-02",
+      "name": "Additive-Only / No Budget Enforcement",
+      "severity": "CRITICAL",
+      "recurrence_count": 4
+    },
+    {
+      "pattern_code": "P-03",
+      "name": "Behavioral Fix for Structural Problem",
+      "severity": "CRITICAL",
+      "recurrence_count": 14
+    },
+    {
+      "pattern_code": "P-04",
+      "name": "Missing Reference Files / Orphaned Citations",
+      "severity": "HIGH",
+      "recurrence_count": 7
+    },
+    {
+      "pattern_code": "P-05",
+      "name": "Gate Sequence Violation",
+      "severity": "HIGH",
+      "recurrence_count": 5
+    },
+    {
+      "pattern_code": "P-06",
+      "name": "Wrong Skill Triggered / Routing Failure",
+      "severity": "HIGH",
+      "recurrence_count": 3
+    },
+    {
+      "pattern_code": "P-07",
+      "name": "Platform Constraint Discovery Through Failure",
+      "severity": "HIGH",
+      "recurrence_count": 5
+    },
+    {
+      "pattern_code": "P-08",
+      "name": "Unbounded Meta-Work / Recommendation Queue Debt",
+      "severity": "HIGH",
+      "recurrence_count": 8
+    },
+    {
+      "pattern_code": "P-09",
+      "name": "Partial Paste / Incomplete Deliverable",
+      "severity": "MEDIUM",
+      "recurrence_count": 12
+    },
+    {
+      "pattern_code": "P-10",
+      "name": "Position Drift / Specification Drift Under Pressure",
+      "severity": "MEDIUM",
+      "recurrence_count": 4
+    },
+    {
+      "pattern_code": "P-11",
+      "name": "Skill Scope Contamination",
+      "severity": "HIGH",
+      "recurrence_count": 3
+    },
+    {
+      "pattern_code": "P-12",
+      "name": "Context-Switch Momentum Overrides Procedural Gates",
+      "severity": "HIGH",
+      "recurrence_count": 6
+    },
+    {
+      "pattern_code": "P-13",
+      "name": "Context Compression Loss",
+      "severity": "HIGH",
+      "recurrence_count": 1
+    },
+    {
+      "pattern_code": "P-14",
+      "name": "Tool Write Without Verification",
+      "severity": "HIGH",
+      "recurrence_count": 1
+    },
+    {
+      "pattern_code": "P-15",
+      "name": "Complexity Inflation Under Iterative Pressure",
+      "severity": "CRITICAL",
+      "recurrence_count": 1
     }
   ]
 }

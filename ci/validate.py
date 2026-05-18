@@ -214,6 +214,24 @@ def main() -> int:
     else:
         print(f"  reference files: PASS")
 
+    # F-020 structural fix: enforce Gate 8 mandate that every skill has >= 1 reference file.
+    # Behavioral text in Gate 8 (skill-publisher) is insufficient — this CI check cannot
+    # be reversed by session pressure. Pattern: P-10 Position Drift.
+    # WARN now; will become HARD FAIL after corpus sweep clears the 11 legacy skills
+    # that predate the references/ mandate.
+    refs_dir = skill_dir / "references"
+    ref_files = list(refs_dir.glob("*.md")) if refs_dir.is_dir() else []
+    if not ref_files:
+        print(
+            f"  references directory: WARN [F-020] — "
+            f"{'references/ directory missing' if not refs_dir.is_dir() else 'references/ is empty'}. "
+            f"All skills require >= 1 reference file (Gate 8 mandate). "
+            f"Move domain expertise out of the body into references/. "
+            f"(Will become HARD FAIL after corpus sweep.)"
+        )
+    else:
+        print(f"  references directory: PASS — {len(ref_files)} file(s)")
+
     status, hits = check_banned_arxiv(content)
     if status == "FAIL":
         fails += 1
