@@ -32,3 +32,13 @@ jobs:
 
       - name: Enforce corpus ceiling
         run: python3 ci/check_ceiling.py
+
+      - name: Skill gate check (F-035/F-036)
+        run: |
+          result=0
+          python3 ci/check_skill_gate.py --ci || result=$?
+          # exit 2 = WARN (no modified skills) — allowed through
+          if [ "$result" -eq 1 ]; then
+            echo "BLOCKED: skill gate failed — gates_passed stale or SKILL_VERSION not incremented"
+            exit 1
+          fi
