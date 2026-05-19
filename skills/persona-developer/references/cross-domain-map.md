@@ -70,6 +70,30 @@ When domain rules conflict, apply in this order (highest to lowest priority):
   that encodes game logic (mana, cycles, progression) requires a test file.
   UI-only components (layout, visual) do not.
 
+### PS + DB
+
+**Interaction:** D1 (PS code) and Supabase (DB code) are distinct backends.
+**No conflict:** DB owns Supabase/PostgREST patterns; PS owns D1/Cloudflare MCP patterns.
+**Synthesis:** Confirm which backend is in scope before writing any query. Never apply
+  RLS or service_role patterns to D1 ops; never apply D1 INSERT OR REPLACE to Supabase.
+**Watch for:** Session where both Supabase and D1 work is happening — explicitly
+  label each code block with its target backend.
+
+### PS + SC
+
+**Interaction:** CI scripts reference session-continuity toolchain paths.
+**Rule:** Before writing any code that calls `validate_handoff.py`, confirm path
+  resolves: `find /home/claude/cs-work -name validate_handoff.py`. If absent, bootstrap
+  the script before referencing it. SC loads session state; PS writes/validates it.
+
+### PS + TDD
+
+**Interaction:** Both cover code correctness, but at different layers.
+**No conflict:** TDD covers TS/React Native test protocol; PS covers Python syntax
+  validation and CI script correctness.
+**Synthesis:** `python3 -m py_compile` for Python scripts; `.test.ts` TDD protocol for
+  RN/Zustand code. Never apply RN TDD protocol to Python scripts or vice versa.
+
 ---
 
 ## Multi-Domain Synthesis Protocol
