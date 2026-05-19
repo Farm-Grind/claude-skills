@@ -59,9 +59,7 @@ Failure modes Claude exhibits without this skill. This is why the skill exists.
 
 ## GATE 0 — RESEARCH AUDIT
 
-**Mandatory first step:** `python3 /home/claude/cs-work/ci/skill_gate_open.py --skill <skill-name>` — writes token required by validate.py (Gate 7). Packaging blocked if skipped. (P-12 / F-050 STRUCTURAL gate)
-
-Run before any design or editing work. One row match → SUBSTANTIAL; run research. If none → MINOR, skip Gate 0, proceed to Gate 0.5.
+Run before any design or editing work. One row match → SUBSTANTIAL; run research.
 
 | Any of these true → SUBSTANTIAL (run utility-data-analyst) |
 |---|
@@ -74,6 +72,8 @@ Run before any design or editing work. One row match → SUBSTANTIAL; run resear
 | Any existing section replaced rather than added to |
 | Proposed addition has no documented failure mode in loaded materials |
 | Skill last researched more than 4 weeks ago |
+
+If none → MINOR. Skip Gate 0. Proceed to Gate 0.5.
 
 **Research output block (required when research runs):**
 ```
