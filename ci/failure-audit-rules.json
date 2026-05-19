@@ -2,7 +2,7 @@
   "_meta": {
     "source": "D1 claude-config / validation_rules",
     "database_id": "afd78e0e-583e-4e78-87fc-dd6bc8150ce9",
-    "last_synced": "2026-05-18",
+    "last_synced": "2026-05-19",
     "description": "Static CI mirror of failure audit validation rules. Do not edit manually \u2014 sync from D1 when rules change. See ci/sync-failure-rules.py for the sync command.",
     "total_patterns": 15,
     "total_findings": 52
