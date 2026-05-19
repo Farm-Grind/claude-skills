@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -35,8 +37,6 @@ jobs:
 
       - name: Skill gate check (F-035/F-036)
         run: |
-          # Ensure origin/main is available for git diff origin/main...HEAD
-          git fetch origin main --depth=1
           result=0
           python3 ci/check_skill_gate.py --ci || result=$?
           # exit 2 = WARN (no modified skills) — allowed through
