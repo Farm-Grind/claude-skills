@@ -133,7 +133,15 @@
       "enforcement": "SESSION_LEVEL \u2014 enforced via user preferences A7"
     }
   ],
-  "open_findings": [],
+  "open_findings": [
+    {
+      "finding_id": "F-056",
+      "pattern_code": "P-09",
+      "title": "PR merge deferred to user when diverged branch blocks auto-merge \u2014 3 sessions",
+      "artifact_affected": "PR merge procedure \u2014 session start / handoff blocks; ci/SESSION-START.md",
+      "project_scope": "UNIVERSAL"
+    }
+  ],
   "pattern_recurrence": {
     "P-01": 6,
     "P-02": 4,
