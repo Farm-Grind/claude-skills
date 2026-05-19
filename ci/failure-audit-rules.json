@@ -5,7 +5,7 @@
     "last_synced": "2026-05-18",
     "description": "Static CI mirror of failure audit validation rules. Do not edit manually \u2014 sync from D1 when rules change. See ci/sync-failure-rules.py for the sync command.",
     "total_patterns": 15,
-    "total_findings": 49
+    "total_findings": 51
   },
   "static_checks": [
     {
@@ -163,10 +163,24 @@
       "project_scope": "UNIVERSAL"
     },
     {
+      "finding_id": "F-051",
+      "pattern_code": "P-04",
+      "title": "PROC-05 in OPERATING-PROCEDURES.md describes --force-push as unimplemented workaround \u2014 F-049 already shipped it",
+      "artifact_affected": "ci/OPERATING-PROCEDURES.md \u2014 PROC-05 section",
+      "project_scope": "UNIVERSAL"
+    },
+    {
       "finding_id": "F-027",
       "pattern_code": "P-07",
       "title": "Cloudflare D1 handoff write may fail when session budget exhausted at HANDOFF ALERT",
       "artifact_affected": "utility-core-session-monitor/SKILL.md close-out protocol \u2014 D1 write step",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-050",
+      "pattern_code": "P-12",
+      "title": "Skill-publisher gate sequence skipped during data-analyst PART 13 packaging \u2014 recurrence after F-035 TEMPORAL fix",
+      "artifact_affected": "utility-data-analyst packaging \u2014 data-analyst PART 13 session 2026-05-17",
       "project_scope": "UNIVERSAL"
     }
   ],
@@ -174,7 +188,7 @@
     "P-01": 6,
     "P-02": 4,
     "P-03": 14,
-    "P-04": 7,
+    "P-04": 8,
     "P-05": 5,
     "P-06": 3,
     "P-07": 5,
@@ -182,7 +196,7 @@
     "P-09": 12,
     "P-10": 4,
     "P-11": 3,
-    "P-12": 6,
+    "P-12": 7,
     "P-13": 1,
     "P-14": 1,
     "P-15": 1
@@ -210,7 +224,7 @@
       "pattern_code": "P-04",
       "name": "Missing Reference Files / Orphaned Citations",
       "severity": "HIGH",
-      "recurrence_count": 7
+      "recurrence_count": 8
     },
     {
       "pattern_code": "P-05",
@@ -258,7 +272,7 @@
       "pattern_code": "P-12",
       "name": "Context-Switch Momentum Overrides Procedural Gates",
       "severity": "HIGH",
-      "recurrence_count": 6
+      "recurrence_count": 7
     },
     {
       "pattern_code": "P-13",
