@@ -163,13 +163,6 @@
       "project_scope": "UNIVERSAL"
     },
     {
-      "finding_id": "F-051",
-      "pattern_code": "P-04",
-      "title": "PROC-05 in OPERATING-PROCEDURES.md describes --force-push as unimplemented workaround \u2014 F-049 already shipped it",
-      "artifact_affected": "ci/OPERATING-PROCEDURES.md \u2014 PROC-05 section",
-      "project_scope": "UNIVERSAL"
-    },
-    {
       "finding_id": "F-027",
       "pattern_code": "P-07",
       "title": "Cloudflare D1 handoff write may fail when session budget exhausted at HANDOFF ALERT",
