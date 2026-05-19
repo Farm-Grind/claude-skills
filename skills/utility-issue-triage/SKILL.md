@@ -16,7 +16,7 @@ description: >
   real-time session monitoring (use utility-core-session-monitor).
   Load once per session.
 ---
-gates_passed: 2026-05-18
+gates_passed: 2026-05-19
 SKILL_VERSION: v1.8.0
 
 # utility-issue-triage
