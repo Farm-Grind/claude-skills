@@ -2,7 +2,7 @@
   "_meta": {
     "source": "D1 claude-config / validation_rules",
     "database_id": "afd78e0e-583e-4e78-87fc-dd6bc8150ce9",
-    "last_synced": "2026-05-18",
+    "last_synced": "2026-05-19",
     "description": "Static CI mirror of failure audit validation rules. Do not edit manually \u2014 sync from D1 when rules change. See ci/sync-failure-rules.py for the sync command.",
     "total_patterns": 15,
     "total_findings": 48
@@ -137,7 +137,7 @@
     {
       "finding_id": "F-037",
       "pattern_code": "P-03",
-      "title": "All 3 proposed enforcement rules are BEHAVIORAL",
+      "title": "All 3 proposed enforcement rules are BEHAVIORAL \u2014 wrong fix category for recurring process bypass",
       "artifact_affected": "spec-process-enforcement-draft.md \u2014 all 3 proposed rules; user preferences draft",
       "project_scope": "UNIVERSAL"
     },
@@ -163,24 +163,10 @@
       "project_scope": "UNIVERSAL"
     },
     {
-      "finding_id": "F-036",
-      "pattern_code": "P-06",
-      "title": "Skill invoked as facsimile \u2014 output produced without loading SKILL.md or reference files",
-      "artifact_affected": "utility-skill-publisher \u2014 routing verification gap; /mnt/skills/user/ write path",
-      "project_scope": "UNIVERSAL"
-    },
-    {
       "finding_id": "F-027",
       "pattern_code": "P-07",
       "title": "Cloudflare D1 handoff write may fail when session budget exhausted at HANDOFF ALERT",
       "artifact_affected": "utility-core-session-monitor/SKILL.md close-out protocol \u2014 D1 write step",
-      "project_scope": "UNIVERSAL"
-    },
-    {
-      "finding_id": "F-035",
-      "pattern_code": "P-12",
-      "title": "Direct str_replace on SKILL.md bypassed skill-publisher gate entirely",
-      "artifact_affected": "utility-skill-publisher/SKILL.md \u2014 activation trigger gap",
       "project_scope": "UNIVERSAL"
     }
   ],
