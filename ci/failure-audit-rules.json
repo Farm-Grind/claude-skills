@@ -2,7 +2,7 @@
   "_meta": {
     "source": "D1 claude-config / validation_rules",
     "database_id": "afd78e0e-583e-4e78-87fc-dd6bc8150ce9",
-    "last_synced": "2026-05-18",
+    "last_synced": "2026-05-19",
     "description": "Static CI mirror of failure audit validation rules. Do not edit manually \u2014 sync from D1 when rules change. See ci/sync-failure-rules.py for the sync command.",
     "total_patterns": 15,
     "total_findings": 51
@@ -167,13 +167,6 @@
       "pattern_code": "P-07",
       "title": "Cloudflare D1 handoff write may fail when session budget exhausted at HANDOFF ALERT",
       "artifact_affected": "utility-core-session-monitor/SKILL.md close-out protocol \u2014 D1 write step",
-      "project_scope": "UNIVERSAL"
-    },
-    {
-      "finding_id": "F-050",
-      "pattern_code": "P-12",
-      "title": "Skill-publisher gate sequence skipped during data-analyst PART 13 packaging \u2014 recurrence after F-035 TEMPORAL fix",
-      "artifact_affected": "utility-data-analyst packaging \u2014 data-analyst PART 13 session 2026-05-17",
       "project_scope": "UNIVERSAL"
     }
   ],
