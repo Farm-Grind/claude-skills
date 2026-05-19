@@ -16,19 +16,20 @@ Usage:
 Workflow:
     1. Claude writes the handoff block to /tmp/handoff.md
     2. Claude runs: python3 ci/validate_handoff.py /tmp/handoff.md
-    3. If exit 0 — paste the block into chat
-    4. If exit 1 — fix the reported failures, re-validate, then paste
+    3. If exit 0 (pass, block is structurally valid) — paste the block into chat
+    4. If exit 1 (fail, one or more gates failed) — fix the reported failures,
+       re-validate, then paste
 
 Exit codes:
     0 = PASS — block is structurally valid, safe to deliver
     1 = FAIL — one or more gates failed, block must not be delivered
 
-Gates:
+Gates (FAIL unless noted):
     HV-01  Block is wrapped in a fenced code block (``` delimiters)
     HV-02  Opening and closing delimiters are present and balanced
     HV-03  No prose appears after the closing delimiter
-    HV-04  Required fields are all present: NEXT, CONTEXT, RECOMMENDATION,
-           ACTION REQUIRED
+    HV-04  Required fields are all present: SUMMARY, NEXT, CONTEXT,
+           RECOMMENDATION, ACTION REQUIRED
     HV-05  No nested fenced code blocks inside the handoff block
     HV-06  NEXT field is non-empty (not just a label)
     HV-07  CONTEXT field is non-empty
@@ -36,6 +37,13 @@ Gates:
     HV-09  ACTION REQUIRED section contains at least one bullet (•)
     HV-10  Block is the last non-whitespace content in the file
            (no trailing prose after closing ```)
+    HV-11  SUMMARY field is non-empty (≥15 chars) and is not composed
+           solely of bare F-XX / P-XX ticket codes without inline descriptions
+    HV-12  [WARN only — does not cause FAIL] CONTEXT, RECOMMENDATION, and
+           ACTION REQUIRED fields are scanned for bare F-XX / P-XX ticket
+           codes not immediately followed by a parenthetical description.
+           Each match emits a WARN line. Gradual rollout: fix before next
+           audit cycle.
 """
 
 import re
@@ -47,11 +55,19 @@ from pathlib import Path
 # ── Required fields ───────────────────────────────────────────────────────────
 
 REQUIRED_FIELDS = [
+    "SUMMARY",
     "NEXT",
     "CONTEXT",
     "RECOMMENDATION",
     "ACTION REQUIRED",
 ]
+
+# ── Regex for bare F-XX / P-XX codes ─────────────────────────────────────────
+# Matches F-NNN or P-NN not immediately followed by whitespace + '(' ...
+# i.e. the code appears alone with no inline parenthetical description.
+_BARE_CODE_RE = re.compile(
+    r'\b([FP]-\d{2,3})\b(?!\s*\()',
+)
 
 # ── Gate implementations ──────────────────────────────────────────────────────
 
@@ -205,6 +221,44 @@ def hv_09_action_bullets(block: str) -> tuple[bool, str]:
     return True, f"{len(bullets)} action bullet(s) found"
 
 
+def hv_11_summary(block: str) -> tuple[bool, str]:
+    """HV-11: SUMMARY field non-empty (≥15 chars) and not composed solely of bare codes."""
+    content = _field_content(block, "SUMMARY")
+    if not content:
+        return False, "SUMMARY field not found or has no content"
+    if len(content) < 15:
+        return False, f"SUMMARY too short ({len(content)} chars) — must be ≥15 chars of plain English"
+    # Check if the entire content is nothing but bare codes and whitespace/punctuation
+    stripped = _BARE_CODE_RE.sub("", content).strip(" ,;:-|")
+    if not stripped:
+        return False, "SUMMARY consists solely of bare F-XX/P-XX codes — must include plain-English description"
+    return True, f"SUMMARY: {len(content)} chars"
+
+
+def hv_12w_bare_codes(block: str) -> list[str]:
+    """
+    HV-12W (WARN — not a FAIL gate): scan CONTEXT, RECOMMENDATION, and
+    ACTION REQUIRED for bare F-XX / P-XX codes not followed by a parenthetical.
+    Returns list of warning strings (empty if clean).
+    """
+    warnings = []
+    fields_to_scan = ["CONTEXT", "RECOMMENDATION", "ACTION REQUIRED"]
+    for field in fields_to_scan:
+        content = _field_content(block, field)
+        if not content:
+            continue
+        for m in _BARE_CODE_RE.finditer(content):
+            code = m.group(1)
+            # Get context around the match for the warning message
+            start = max(0, m.start() - 20)
+            snippet = content[start:m.start() + len(code) + 30].replace("\n", " ")
+            warnings.append(
+                f"  HV-12W    WARN  {field}: bare code \"{code}\" has no inline "
+                f"description — add (description) after it. Context: \"…{snippet}…\""
+            )
+    return warnings
+
+
 # ── Runner ────────────────────────────────────────────────────────────────────
 
 def validate(text: str) -> int:
@@ -266,6 +320,20 @@ def validate(text: str) -> int:
     _print("HV-09", "ACTION REQUIRED has bullets", ok, msg)
     if not ok:
         fails += 1
+
+    # HV-11
+    ok, msg = hv_11_summary(block)
+    _print("HV-11", "SUMMARY non-empty and not code-only", ok, msg)
+    if not ok:
+        fails += 1
+
+    # HV-12W (warn only — does not increment fails)
+    code_warnings = hv_12w_bare_codes(block)
+    if code_warnings:
+        for w in code_warnings:
+            print(w)
+    else:
+        _print("HV-12W", "No bare F-XX/P-XX codes in scanned fields", True, "clean")
 
     print()
     if fails:
