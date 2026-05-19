@@ -17,7 +17,7 @@ description: >
   Load once per session.
 ---
 gates_passed: 2026-05-19
-SKILL_VERSION: v1.6.0
+SKILL_VERSION: v1.7.0
 
 # utility-issue-triage
 
@@ -411,7 +411,7 @@ Step 2b fix-type gate applies. Self-reported entries use the same INSERT pattern
 |---|---|
 | utility-core-output-gate | Pre-delivery checks A1–A8 and B1–B10 |
 | utility-core-session-monitor | Context length and drift signals |
-| loop-core-error-log | Source for self-reporting, WONT_FIX, and recurrence cross-ref patterns added in v1.5.0. Loop-specific Notion storage — not portable. |
+| error_log (D1: the-loop-storage) | Source for self-reporting, WONT_FIX, and recurrence cross-ref — table: error_log, columns: id, description, root_cause, severity, status, fix_applied |
 | cloudflare-storage_v1_3 | D1 query patterns, schema, queue submission |
 | triage-reference_v1 | Constraint budget, removal-before-addition protocol |
 | diagnostic-process-research-synthesis_v1_0 | Research grounding for Changes 1–5 |
