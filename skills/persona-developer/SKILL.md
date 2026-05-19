@@ -16,7 +16,7 @@ description: >
   lore questions, art direction, balance math, or skill authoring.
   Load once per session.
 ---
-gates_passed: 2026-05-18
+gates_passed: 2026-05-19
 SKILL_VERSION: v2.2
 # Replaces: loop-extended-code-guardian, utility-mobile-react-native,
 # utility-build-supabase, loop-screen-inventory, loop-data-model,
