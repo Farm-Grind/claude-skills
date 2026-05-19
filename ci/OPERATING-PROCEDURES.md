@@ -157,35 +157,30 @@ enforcement bypass.
 
 ---
 
-## PROC-05 — sync-failure-rules.py Force-Push Gap
+## PROC-05 — sync-failure-rules.py Same-Date Push
 
-**Problem:** sync-failure-rules.py uses `git push origin <branch>` without `--force`.
-When a prior sync branch with the same date name was squash-merged into main, the remote
-branch head diverges from what the script creates locally. The push fails:
-
-```
-ERROR: git push failed: ! [rejected] sync/failure-audit-YYYY-MM-DD -> sync/failure-audit-YYYY-MM-DD
-       (non-fast-forward)
-```
+**Problem:** When a prior sync branch with the same date name was squash-merged into
+main, the remote branch head diverges from what the script creates locally. The push
+fails with a non-fast-forward rejection.
 
 **Why this happens:** Squash-merge rewrites history — the remote branch tip no longer
-matches the local tip after `git checkout main && git pull`. The script has no
-`--force-push` flag to handle this case.
+matches the local tip after `git checkout main && git pull`.
 
-**Workaround (until script is patched):**
+**Resolution:** Pass `--force-push` to sync-failure-rules.py. This flag was implemented
+in F-049 (PR #13, merged 2026-05-18) and uses `--force-with-lease` internally.
 
 ```bash
-# After sync-failure-rules.py exits with push error:
-cd /home/claude/cs-work
-git push origin sync/failure-audit-YYYY-MM-DD --force
+python3 ci/sync-failure-rules.py \
+  --patterns /tmp/patterns.json \
+  --open-findings /tmp/open_findings.json \
+  --total-findings <COUNT> \
+  --last-synced $(date +%Y-%m-%d) \
+  --force-push
 ```
 
 **When this triggers:** Any time PROC-04 runs on the same calendar date as a prior
 sync that was squash-merged. This is common when multiple D1 writes occur in one day.
 
-**Fix status:** Needs `--force-push` flag added to sync-failure-rules.py git_push().
-Tracked in item 8e of open work queue. When patched, remove this workaround note and
-update the script docstring.
-
-**Detection:** sync-failure-rules.py will print `ERROR: git push failed:` with the
-rejection message. The error is not silent — it exits with code 2.
+**Detection:** Without `--force-push`, sync-failure-rules.py will print
+`ERROR: git push failed:` with the rejection message and exit code 2. Re-run with
+`--force-push` to resolve.
