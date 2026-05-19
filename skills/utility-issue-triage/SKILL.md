@@ -17,7 +17,7 @@ description: >
   Load once per session.
 ---
 gates_passed: 2026-05-19
-SKILL_VERSION: v1.7.0
+SKILL_VERSION: v1.8.0
 
 # utility-issue-triage
 
@@ -227,14 +227,16 @@ Q4: If this fix had been in place, would the diagnosed conversation have produce
   Uncertain → flag explicitly. For HB: Uncertain = defer to fresh-context per Rule 8.
 ```
 For BEHAVIORAL/TEMPORAL fixes: mark UNCERTAIN by default unless specific transcript evidence shows mechanism was addressable in-context.
-**Confirmation block (required for any Fix Block with structural fixes):**
+**Confirmation block (required for any Fix Block with structural or temporal fixes):**
 ```
 Fix Block self-review:
   [Fix ID]  Mechanism: [stated]  Layer: [named]  Survives mechanism: [Yes/No]
             Q4: [Yes / No / Uncertain — reason]
+            STRUCTURAL considered: [documented — evaluated / adopted / rejected with reason]
   Status: CLEAR to deliver / BLOCKED — [reason]
 ```
-HARD FAIL: Do not deliver a Fix Block with structural fixes without this block.
+HARD FAIL: Do not deliver a Fix Block with structural or temporal fixes without this block.
+HARD FAIL: STRUCTURAL considered field absent from self-review block — cannot deliver.
 ---
 
 ## PART 4c — FIX QUALITY GATE
@@ -287,7 +289,9 @@ Fixes
   P-001  Add: user preferences A7 to Q-RC3 scope in system prompt §3
 Fix Block self-review:
   P-001  Mechanism: A7 absent from Q-RC3 scope  Layer: system prompt  Survives mechanism: Yes
-         Q4: Yes  Status: CLEAR to deliver
+         Q4: Yes
+         STRUCTURAL considered: evaluated — system prompt addition is STRUCTURAL; adopted.
+  Status: CLEAR to deliver
 Queue  OPS-041 (P2-blocking, skill-edit, QUEUED)
 Log    ERR-014 (FMT, HIGH, OPEN)
 ```
