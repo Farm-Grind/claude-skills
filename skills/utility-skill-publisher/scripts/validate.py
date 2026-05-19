@@ -85,14 +85,73 @@ def check_line_count(path: Path) -> tuple[str, str]:
     return ("PASS", f"{n} lines")
 
 
+def _check_gate_token(skill_name: str) -> tuple[bool, str]:
+    """
+    Check that skill_gate_open.py was called for this skill today (P-12 / F-050 STRUCTURAL fix).
+
+    Token path: /tmp/skill-gate-{name}-{date}.token
+    Written by ci/skill_gate_open.py at Gate 0 entry.
+
+    Returns (ok, message).
+    """
+    import re
+    from datetime import date
+    safe = re.sub(r"[^a-zA-Z0-9_-]", "-", skill_name)
+    token = Path("/tmp") / f"skill-gate-{safe}-{date.today()}.token"
+    if token.exists():
+        return True, f"gate token present ({token.name})"
+    return False, (
+        f"gate token absent — skill-publisher gate sequence was not opened for '{skill_name}'.\n"
+        f"  Run first: python3 ci/skill_gate_open.py --skill {skill_name}\n"
+        f"  Then restart the gate sequence from Gate 0.\n"
+        f"  Expected token: {token}\n"
+        f"  (P-12 / F-050 STRUCTURAL gate — context-switch momentum bypass prevention)"
+    )
+
+
+def _skill_name_from_path(path: Path) -> str:
+    """
+    Infer skill name from SKILL.md path.
+    /tmp/utility-data-analyst/SKILL.md -> utility-data-analyst
+    /mnt/skills/user/utility-data-analyst/SKILL.md -> utility-data-analyst
+    Falls back to parent dir name; if that is 'scripts' or '.', uses grandparent.
+    """
+    parent = path.parent.name
+    if parent in ("scripts", ".", ""):
+        parent = path.parent.parent.name
+    return parent
+
+
 def main() -> int:
-    if len(sys.argv) != 2:
-        print("Usage: python3 scripts/validate.py <path-to-SKILL.md>", file=sys.stderr)
+    if len(sys.argv) < 2:
+        print("Usage: python3 scripts/validate.py <path-to-SKILL.md> [--skip-token-check]", file=sys.stderr)
         return 2
-    path = Path(sys.argv[1])
+
+    skip_token = "--skip-token-check" in sys.argv
+    skill_md_args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    if not skill_md_args:
+        print("Usage: python3 scripts/validate.py <path-to-SKILL.md> [--skip-token-check]", file=sys.stderr)
+        return 2
+
+    path = Path(skill_md_args[0])
     if not path.exists():
         print(f"FAIL — file not found: {path}", file=sys.stderr)
         return 1
+
+    # ── Gate token check (P-12 / F-050 STRUCTURAL gate) ──────────────────────
+    # Blocks Gate 7 if skill_gate_open.py was not called for this skill today.
+    # --skip-token-check is reserved for CI mode (pre-commit / GitHub Actions)
+    # where gate sequence is not applicable. Never use in interactive sessions.
+    if not skip_token:
+        skill_name = _skill_name_from_path(path)
+        token_ok, token_msg = _check_gate_token(skill_name)
+        if not token_ok:
+            print("GATE 7 VALIDATOR — TOKEN CHECK FAIL")
+            print("-" * 60)
+            print(f"  SGT-01  ✗  {token_msg}")
+            print("-" * 60)
+            print("OVERALL: FAIL (gate sequence not opened — packaging blocked)")
+            return 1
 
     content = path.read_text()
     fails = 0
