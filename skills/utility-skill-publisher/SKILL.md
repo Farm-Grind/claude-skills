@@ -18,7 +18,7 @@ description: >
   copy). Load once per session.
 ---
 gates_passed: 2026-05-19
-SKILL_VERSION: v3.6
+SKILL_VERSION: v3.7
 
 # Skill Publisher — Quality Gate
 
