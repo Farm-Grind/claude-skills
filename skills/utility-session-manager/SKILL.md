@@ -1,24 +1,30 @@
 ---
 name: utility-session-manager
 description: >
-  Generic session manager dispatcher for any project (games, novels, comics,
-  code). Four sub-skills: @briefing (session start), @sequencer (what's next),
-  @handoff (save state), @validate (audit). All project-specific configuration
-  lives in D1 tables — skill body is project-agnostic. Use automatically —
-  do not wait to be asked. Trigger on ANY of these signals: session start,
-  "where are we", "load briefing", "what's next", "what should we work on",
-  "what's blocking", session end, "save handoff", "close out", "wrap up",
-  "check handoff", "validate state". Do NOT trigger for: project planning
-  outside session context, design work, lore creation, coding. Load once per
-  session.
+  Always-active session lifecycle manager and context health monitor for any
+  project. Fires silently at the start of every session — runs @monitor on
+  first message, then tracks tool calls, turns, and behavioral drift
+  throughout. Routes explicit signals to five sub-skills: @monitor (context
+  health, drift detection, escalation), @briefing (session start briefing),
+  @sequencer (next task), @handoff (save state), @validate (audit state). All
+  project-specific configuration lives in D1 tables — skill body is
+  project-agnostic. Use automatically — do not wait to be asked. Trigger on
+  ANY session first message OR these explicit signals: "where are we", "load
+  briefing", "what's next", "what should we work on", "what's blocking",
+  "save handoff", "close out", "wrap up", "check handoff", "validate state",
+  "how long is this session", "should we start a new chat", "generate handoff
+  prompt". Do NOT trigger for: design work, lore creation, or coding with no
+  session lifecycle signal. Load once per session.
 ---
-SKILL_VERSION: v1.0
+gates_passed: 2026-05-19
+SKILL_VERSION: v2.2
 Type: dispatcher
 
 # Universal Session Manager
 
-Generic dispatcher for session lifecycle management across any project.
-All project-specific logic lives in D1 configuration — zero project IP in this skill.
+Always-active dispatcher for session lifecycle management and context health
+monitoring across any project. All project-specific logic lives in D1
+configuration — zero project IP in this skill.
 
 ---
 
@@ -36,9 +42,27 @@ Failure modes Claude exhibits without this skill.
 
 5. **Skipping the re-fetch verification step in @handoff** — the write returning `changes=1` confirms the write succeeded but does not verify content correctness. The re-fetch is mandatory; omitting it violates HANDOFF_CONTENT_GATE.
 
+6. **Continuing task work after HANDOFF ALERT fires** — HANDOFF ALERT immediately sets state to SESSION_ENDING. No further task work, deliverables, or scope expansion is valid. Produce the handoff immediately — a partial task with an accurate handoff is recoverable; a completed task with a fabricated handoff at 90% context is not.
+
+7. **Not re-inferring session state at the start of each response** — @monitor has no memory between turns. State (IN_SESSION / SESSION_ENDING / SESSION_ENDED) must be re-derived each turn from observable signals. Running from prior-turn state assumptions causes forbidden actions in SESSION_ENDING or SESSION_ENDED states.
+
+8. **Silently continuing after a drift signal fires** — when a behavioral drift signal fires (user correction, re-asked question, contradicted decision), escalate to HANDOFF ALERT immediately. Do not finish the current task first. Do not defer the handoff.
+
 ---
 
 ## INTAKE CLASSIFICATION
+
+**Step 0: Auto-monitor (runs silently on every turn)**
+
+```
+Load references/sub-skill-monitor.md
+Re-infer session state from conversation (IN_SESSION / SESSION_ENDING / SESSION_ENDED)
+If SESSION_ENDED: declare state, instruct user to paste handoff — no further work
+If SESSION_ENDING: route to @handoff immediately — skip Steps 1–3
+If IN_SESSION and no HANDOFF ALERT: run threshold check silently
+  If threshold crossed: emit WARNING or HANDOFF ALERT per monitor reference
+  If no threshold crossed: silent — proceed to Steps 1–3
+```
 
 **Step 1: Detect project context**
 
@@ -58,7 +82,10 @@ Query `session_config` for all entries matching project_id. If config missing �
 **Step 3: Classify user intent**
 
 ```
-IF user trigger matches: session start OR "where are we" OR "load briefing"
+IF user trigger matches: "how long", "are we close", "should we start a new chat",
+  "do you still have context", "generate handoff prompt", context status request
+  → Route to @monitor (explicit status report)
+ELSE IF user trigger matches: "where are we" OR "load briefing"
   → Route to @briefing
 ELSE IF user trigger matches: "what's next" OR "what should we work on" OR "what's blocking"
   → Route to @sequencer
@@ -67,7 +94,7 @@ ELSE IF user trigger matches: session end OR "save handoff" OR "close out" OR "w
 ELSE IF user trigger matches: "check handoff" OR "validate state" OR "handoff report"
   → Route to @validate
 ELSE
-  ASK: "Did you mean @briefing / @sequencer / @handoff / @validate?"
+  ASK: "Did you mean @monitor / @briefing / @sequencer / @handoff / @validate?"
 ```
 
 ---
@@ -76,6 +103,7 @@ ELSE
 
 | Intent | Sub-Skill | Reference File |
 |--------|-----------|-----------------|
+| Context health, drift detection, escalation | @monitor | references/sub-skill-monitor.md |
 | Generate session briefing | @briefing | references/sub-skill-briefing.md |
 | Identify next task | @sequencer | references/sub-skill-sequencer.md |
 | Save session state | @handoff | references/sub-skill-handoff.md |
@@ -138,6 +166,15 @@ User: "load briefing for novel-project"
 → Step 2: Query D1 → 0 rows returned for config_type LIKE '%novel-project'
 → ERROR: "Configuration not found for novel-project. Create entries in D1 session_config before use."
 
+**Example 5 — Auto-trigger at session start, no lifecycle signal:**
+First message: "Help me fix the FlashList perf issue in the Loop project"
+→ Step 0: No prior turns — load references/sub-skill-monitor.md, run @monitor
+  session-start check. 3 MCP servers connected → passive load ~60K tokens.
+  State = IN_SESSION. Tool calls = 0, turns = 1 → no threshold crossed. Silent.
+→ Step 1: "loop" in context → project_id = "loop-v2"
+→ Step 2: Query D1 session_config for loop-v2
+→ Step 3: no session lifecycle signal → no routing; proceed with user task normally
+
 ---
 
 ## OUT OF SCOPE
@@ -151,6 +188,7 @@ enforce rules beyond what config specifies, generate project IP.
 
 | Skill / Resource | Domain |
 |---|---|
+| references/sub-skill-monitor.md | Context health monitoring, drift detection, state machine, escalation |
 | references/sub-skill-briefing.md | Session start briefing logic |
 | references/sub-skill-sequencer.md | Next-task identification logic |
 | references/sub-skill-handoff.md | Handoff collection, write, and verification logic |
