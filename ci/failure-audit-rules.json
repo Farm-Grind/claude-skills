@@ -133,43 +133,7 @@
       "enforcement": "SESSION_LEVEL \u2014 enforced via user preferences A7"
     }
   ],
-  "open_findings": [
-    {
-      "finding_id": "F-037",
-      "pattern_code": "P-03",
-      "title": "All 3 proposed enforcement rules are BEHAVIORAL \u2014 wrong fix category for recurring process bypass",
-      "artifact_affected": "spec-process-enforcement-draft.md \u2014 all 3 proposed rules; user preferences draft",
-      "project_scope": "UNIVERSAL"
-    },
-    {
-      "finding_id": "F-038",
-      "pattern_code": "P-03",
-      "title": "validate-confirmation.py proposed as structural fix without mechanism analysis",
-      "artifact_affected": "spec-process-enforcement-draft.md \u2014 validate-confirmation.py proposal",
-      "project_scope": "UNIVERSAL"
-    },
-    {
-      "finding_id": "F-039",
-      "pattern_code": "P-03",
-      "title": "MCP R2 skill storage proposed without checking existing failure record",
-      "artifact_affected": "Option C in enforcement options analysis \u2014 MCP write gate with R2 storage",
-      "project_scope": "UNIVERSAL"
-    },
-    {
-      "finding_id": "F-040",
-      "pattern_code": "P-03",
-      "title": "Git hook stated as addressing trainer session F1 without verifying failure path",
-      "artifact_affected": "Option A \u2014 git pre-commit hook; ci/pre-commit hook (installed this session)",
-      "project_scope": "UNIVERSAL"
-    },
-    {
-      "finding_id": "F-027",
-      "pattern_code": "P-07",
-      "title": "Cloudflare D1 handoff write may fail when session budget exhausted at HANDOFF ALERT",
-      "artifact_affected": "utility-core-session-monitor/SKILL.md close-out protocol \u2014 D1 write step",
-      "project_scope": "UNIVERSAL"
-    }
-  ],
+  "open_findings": [],
   "pattern_recurrence": {
     "P-01": 6,
     "P-02": 4,

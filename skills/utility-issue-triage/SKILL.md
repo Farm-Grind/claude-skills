@@ -9,21 +9,22 @@ description: >
   sessions", "this keeps happening", "did the fix hold", "triage session
   failures", "failures in [domain]", "post-implementation check", session ends
   with multiple user corrections, repeated frustration with Claude behavior,
-  user says "that was wrong" / "you got that wrong" / "that's incorrect" mid-session.
+  user says "that was wrong" / "you got that wrong" / "that's incorrect" mid-session,
+  Claude catches its own error pre-output via output-gate or any internal check (self-reporting).
   Do NOT use for: single isolated one-off correction with no recurrence signal;
   lore canon checks; pre-delivery quality gate (use utility-core-output-gate);
   real-time session monitoring (use utility-core-session-monitor).
   Load once per session.
 ---
-gates_passed: 2026-05-17
-SKILL_VERSION: v1.4.0
+gates_passed: 2026-05-19
+SKILL_VERSION: v1.6.0
 
 # utility-issue-triage
 
 Project-agnostic diagnostic tool for identifying, classifying, and systematically
 fixing Claude response failures. Routes to one of 5 triage patterns.
 
-Type: capability-uplift
+Type: dispatcher
 
 ---
 
@@ -34,6 +35,7 @@ Type: capability-uplift
 3. **Fix Block self-review absent** — required output field. A report missing it is malformed.
 4. **Q-RC1/2/3 not produced visibly** — absence is a format error that blocks Fix Block generation.
 5. **Reference files not loaded** — running taxonomy, heuristics, or D1 queries from memory = silent degradation. Always load via explicit `view` before the relevant pass.
+6. **Self-reporting skipped when skill not loaded** — PART 5b fires only if issue-triage is already in context. If output-gate catches an error in a session where issue-triage hasn't loaded, fix silently and log in the next triage session.
 
 ---
 
@@ -117,6 +119,8 @@ DUP-vs-HB routing: check Step E bucket results before classifying any recurrence
 
 If any reference file is missing: `⚠ [filename] not found — running degraded. Queue skill maintenance item.` Always proceed.
 
+Reference files do not persist across turns — re-view each turn that uses them.
+
 ---
 
 ## PART 3 — OUTPUT FORMAT
@@ -177,13 +181,31 @@ For D1 write patterns (IMMEDIATE items, queue depth check, error_log INSERT): lo
 **Rule 1 — Root cause, not symptom.** Fix must address the mechanism that produced the failure, not the visible output error.
 **Rule 2 — Structural over one-off.** 2+ occurrences of same failure type → fix must be structural.
 **Rule 3 — Holistic synthesis.** Check for conflicts. Group related fixes. Never propose conflicting instructions.
-**Rule 4 — Specificity gate.** Every fix names: what changes, where (skill / rule / section), new behavior.
+**Rule 4 — Specificity gate.** Every fix names: what changes, where (skill / rule / section), new behavior. Any fix claiming to address a named failure path (citing a specific F-XXX, a session failure, or a named pattern instance) MUST include: (a) exact failure path quoted from the source finding, (b) mechanism trace — the execution step where the fix intercepts the failure. Missing either field → fix is malformed; HARD FAIL.
 HARD FAIL: Never deliver a Fix Block with any fix that fails the specificity gate.
 **Rule 5 — Priority assignment.** IMMEDIATE = prevents active failure or blocks work. NEXT SESSION = quality improvement, no active incident. DEFERRED = low-severity or needs more data.
 **Rule 6 — Layer specification.** Every fix names its architectural layer. Verify the rule lives there.
 HARD FAIL: Never deliver a Fix Block with an unverified target layer.
 **Rule 7 — STRUCTURAL-first mandate.** For recurring failures or HB: (a) enumerate STRUCTURAL option; (b) if feasible STRUCTURAL exists: BEHAVIORAL is PROHIBITED; (c) if no STRUCTURAL: state why explicitly, then use TEMPORAL before BEHAVIORAL. Required visible: `STRUCTURAL considered: [evaluated / why rejected or adopted]`.
+Before generating any fix for a finding: query `SELECT severity FROM failure_patterns WHERE pattern_code = '[code]'` (claude-config D1). If severity = CRITICAL: emit `⛔ CRITICAL PATTERN — BEHAVIORAL fix PROHIBITED. Structural option must be documented and explicitly rejected before any other fix type is accepted.` This banner must appear in the Fix Block before Part 4c runs. Absence = HARD FAIL.
 **Rule 8 — HB fresh-context protocol.** HB requires a SEPARATE EVALUATION SESSION. (a) Produce Q-RC1/2/3. (b) Produce DIAG-handoff with transcript segments, prior fix implementation, diagnostic questions. (c) DO NOT propose new fix for HB in same session. Visible: `HB finding — fix proposal deferred to fresh-context session per Rule 8.`
+**Rule 9 — CI script mechanism analysis.** Any proposed fix involving a CI script, validation script, or post-hoc output check MUST include a visible mechanism analysis block before Part 4c:
+```
+CI MECHANISM ANALYSIS
+Failure mode targeted: [what fails]
+Emission type: [OMISSION (never-X rule missed) / NON-OMISSION (confident incorrect claim, scope misrepresentation)]
+CI intercept point: [pre-emit / post-emit / commit-time]
+Viable: [YES — CI fires before failure / NO — post-hoc, cannot intercept non-omission]
+Citation: [R-074 or equivalent]
+```
+HARD FAIL: NON-OMISSION + post-emit intercept = CI cannot catch this failure. BEHAVIORAL or ACCEPTED_LIMITATION only. [R-074]
+**Rule 10 — Infrastructure domain check.** Any fix proposing changes to storage, platform capabilities, or tool integrations MUST include a visible prior-failure check before fix generation:
+```sql
+SELECT finding_id, title, fix_applied FROM granular_findings
+WHERE fix_applied LIKE '%[domain keyword]%' OR root_cause LIKE '%[domain keyword]%'
+ORDER BY finding_id
+```
+(claude-config D1 — afd78e0e-583e-4e78-87fc-dd6bc8150ce9). All matching findings must be cited and addressed before the proposal proceeds. Absence of query = HARD FAIL.
 Triggered-tool note: if not explicitly invoked, verify signal before proceeding [arxiv 2512.20578].
 
 ---
@@ -314,44 +336,60 @@ Repo path: /home/claude/cs-work/ci/ (clone if absent — see PART 0 gate above).
 
 **Step 3 — INSERT each new finding:**
 Load `references/d1-queries.md` §Failure Audit INSERT. Execute for every finding produced in PART 3. Map fields:
-- `pattern_code` — from failure taxonomy P-01 through P-15 (closest match; use P-12 if context-switch, P-03 if behavioral/self-attestation, P-09 if partial output, P-10 if position/spec drift, P-13 if long-context rule degradation, P-14 if tool write without read-back verify, P-15 if complexity inflation under pressure)
+- `pattern_code` — from failure taxonomy P-01 through P-12 (closest match; use P-12 if context-switch, P-03 if behavioral/self-attestation, P-09 if partial output, P-10 if position/spec drift)
 - `fix_type` — from Fix Quality Gate output (STRUCTURAL / TEMPORAL / BEHAVIORAL)
 - `status` — always OPEN on insert; only Claude that resolves it sets RESOLVED
 - `project_scope` — UNIVERSAL unless finding is demonstrably project-specific (name the project)
 - `source_conversation` — current conversation URL if known; else NULL
 
+**Recurrence rule:** If the same failure mechanism recurs (same category + root cause as an existing entry), add a new finding and cross-reference the original ID in notes: `"Recurrence of F-XXX."` Never overwrite the original entry.
+
+**WONT_FIX status:** Valid only when root cause confirms no feasible prevention (non-reproducible, context-specific, or demonstrably out of scope). Set `status: WONT_FIX`, add justification to notes field. Never use to avoid investigation.
+
 **Step 4 — Sync CI:**
-Query D1 for PAT (see d1-queries.md §Failure Audit INSERT "Get PAT for CI sync"), clone if absent, then execute:
+Query D1 for PAT (see d1-queries.md §Failure Audit INSERT "Get PAT for CI sync"), then execute:
 ```bash
-# Repo must be at /home/claude/cs-work (clone if absent)
-cd /home/claude/cs-work
-git checkout main && git pull origin main
-
-# Save D1 query results to temp files first (via Cloudflare MCP):
-#   SELECT pattern_code, name, severity, recurrence_count FROM failure_patterns ORDER BY pattern_code
-#   → /tmp/patterns.json
-#   SELECT finding_id, pattern_code, title, artifact_affected, project_scope
-#   FROM granular_findings WHERE status='OPEN' ORDER BY pattern_code, finding_id
-#   → /tmp/open_findings.json
-#   SELECT COUNT(*) as total FROM granular_findings → note the number
-
-# Run the sync script (commits to sync/* branch, pushes):
-python3 ci/sync-failure-rules.py \
-  --patterns /tmp/patterns.json \
-  --open-findings /tmp/open_findings.json \
-  --total-findings <COUNT> \
-  --last-synced $(date +%Y-%m-%d) \
-  --commit --push
+cd /home/claude/cs-push
+git pull origin main
+# Update only the open_findings array in ci/failure-audit-rules.json:
+python3 - << 'EOF'
+import json
+from pathlib import Path
+# Findings list comes from Step 4 D1 query result — substitute actual rows below
+open_findings = []  # populated from D1 query output
+p = Path("ci/failure-audit-rules.json")
+data = json.loads(p.read_text())
+data["open_findings"] = open_findings
+data["_meta"]["last_synced"] = "YYYY-MM-DD"  # today's date
+p.write_text(json.dumps(data, indent=2))
+EOF
+git add ci/failure-audit-rules.json
+git commit -m "sync: failure audit findings [F-XXX added]"
+git push origin main
 ```
-The script creates branch `sync/failure-audit-YYYY-MM-DD` and pushes. Open a PR to merge into main.
-HARD FAIL: if git push fails, the script emits an error — emit the updated open_findings JSON as a fenced block for the next connected session.
-Do NOT push directly to main — main is protected; direct pushes will silently fail.
+HARD FAIL: if git push fails, emit the updated open_findings JSON as a fenced block for the next connected session.
 
 **Step 5 — Report in diagnostic output:**
 Append to the Log line: `[N findings written to claude-config granular_findings: F-XXX, F-YYY]`
 If MCP unavailable: `[MCP unavailable — SQL blocks emitted for manual execution]`
 
 **HARD FAIL:** Never skip Step 4 after a successful Step 3 write — findings in D1 that aren't in the CI JSON are invisible to static enforcement.
+
+---
+
+## PART 5b — SELF-REPORTING PROTOCOL
+
+Fires in-session when Claude catches its own error pre-output (via output-gate, any internal post-generation audit, or any skill check that fires a warning flag). Only active if issue-triage is loaded in the current session — see GOTCHA 6.
+
+1. Fix the error silently — present clean output only.
+2. Write to error_log via D1 (load `references/d1-queries.md` §error_log INSERT):
+   - `status: OPEN`
+   - `fix_applied: "Caught pre-output and corrected"`
+   - All other fields populated from context. Use `"Unknown — requires investigation"` for root_cause if mechanism is unclear; never omit.
+3. Append a brief note after the output:
+   `⚠ ERR-XXX self-logged — [short description of what was caught and corrected].`
+
+Step 2b fix-type gate applies. Self-reported entries use the same INSERT pattern as PART 5 Step 3 (granular_findings writes are not required for self-reported entries — error_log only).
 
 ---
 
@@ -363,7 +401,7 @@ If MCP unavailable: `[MCP unavailable — SQL blocks emitted for manual executio
 - Does NOT generate code fixes — use project code-guardian.
 - Does NOT monitor context length — use utility-core-session-monitor.
 - DOES write findings to claude-config granular_findings automatically — see PART 5.
-- Does NOT write to ops_queue or error_log autonomously — Fix Block specifies writes; those execute only after fix is validated.
+- Does NOT write to ops_queue or error_log autonomously — EXCEPT via self-reporting protocol (PART 5b); all other error_log writes execute only after fix is validated.
 
 ---
 
@@ -373,7 +411,7 @@ If MCP unavailable: `[MCP unavailable — SQL blocks emitted for manual executio
 |---|---|
 | utility-core-output-gate | Pre-delivery checks A1–A8 and B1–B10 |
 | utility-core-session-monitor | Context length and drift signals |
-| loop-core-error-log | Legacy error log skill (pre-D1) |
+| loop-core-error-log | Source for self-reporting, WONT_FIX, and recurrence cross-ref patterns added in v1.5.0. Loop-specific Notion storage — not portable. |
 | cloudflare-storage_v1_3 | D1 query patterns, schema, queue submission |
 | triage-reference_v1 | Constraint budget, removal-before-addition protocol |
 | diagnostic-process-research-synthesis_v1_0 | Research grounding for Changes 1–5 |
