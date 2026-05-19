@@ -210,14 +210,18 @@ def git_commit(repo_root, last_synced, open_finding_ids):
         print(f"Committed on branch: {branch}")
 
 
-def git_push(repo_root, last_synced):
+def git_push(repo_root, last_synced, force: bool = False):
     branch = f"sync/failure-audit-{last_synced}"
-    r = _run(["git", "push", "origin", branch], repo_root)
+    cmd = ["git", "push", "origin", branch]
+    if force:
+        cmd.insert(3, "--force-with-lease")
+    r = _run(cmd, repo_root)
     if r.returncode != 0:
         print(f"ERROR: git push failed: {r.stderr}", file=sys.stderr)
         print("HARD FAIL: emit open_findings JSON as fenced block for next session.")
         sys.exit(2)
-    print(f"Pushed: origin/{branch}")
+    push_type = "Force-pushed" if force else "Pushed"
+    print(f"{push_type}: origin/{branch}")
     print(f"Next step: open PR from {branch} -> main")
 
 
@@ -258,8 +262,15 @@ def main():
         "--push", action="store_true",
         help="Push the sync/* branch to origin (implies --commit)"
     )
+    parser.add_argument(
+        "--force-push", action="store_true",
+        help="Force-push (--force-with-lease) the sync/* branch — use when branch "
+             "already exists on remote after a squash-merge divergence (PROC-05 workaround)"
+    )
 
     args = parser.parse_args()
+    if args.force_push:
+        args.push = True
     if args.push:
         args.commit = True
 
@@ -285,7 +296,7 @@ def main():
         git_commit(repo_root, args.last_synced, open_ids)
 
     if args.push:
-        git_push(repo_root, args.last_synced)
+        git_push(repo_root, args.last_synced, force=args.force_push)
 
 
 if __name__ == "__main__":
