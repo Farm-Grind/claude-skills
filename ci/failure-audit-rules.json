@@ -5,7 +5,7 @@
     "last_synced": "2026-05-19",
     "description": "Static CI mirror of failure audit validation rules. Do not edit manually \u2014 sync from D1 when rules change. See ci/sync-failure-rules.py for the sync command.",
     "total_patterns": 15,
-    "total_findings": 51
+    "total_findings": 52
   },
   "static_checks": [
     {
@@ -133,7 +133,15 @@
       "enforcement": "SESSION_LEVEL \u2014 enforced via user preferences A7"
     }
   ],
-  "open_findings": [],
+  "open_findings": [
+    {
+      "finding_id": "F-052",
+      "pattern_code": "P-03",
+      "title": "Rule 7 STRUCTURAL-documentation requirement has no CI enforcement",
+      "artifact_affected": "utility-issue-triage SKILL.md \u2014 Part 4b self-review confirmation block",
+      "project_scope": "UNIVERSAL"
+    }
+  ],
   "pattern_recurrence": {
     "P-01": 6,
     "P-02": 4,
