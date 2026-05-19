@@ -8,7 +8,8 @@ description: >
   "skill", "SKILL.md", or "package" appear in a skill-creation context;
   user says "create a skill", "update this skill", "audit this skill",
   "package this skill", "fix this skill", "change the trigger", "add an
-  example to", "update the description on". Runs a research audit on new
+  example to", "update the description on"; str_replace/create_file on a
+  SKILL.md; direct edit to SKILL.md. Runs a research audit on new
   skills and substantial updates before design work begins. Classifies every
   proposed change before execution. Enforces quality gates BEFORE packaging
   — never after. Do NOT trigger for: non-skill documents (GDD, README,
@@ -16,8 +17,8 @@ description: >
   unrelated to skill authoring (game ability design, lore writing, marketing
   copy). Load once per session.
 ---
-gates_passed: 2026-05-17
-SKILL_VERSION: v3.4
+gates_passed: 2026-05-19
+SKILL_VERSION: v3.5
 
 # Skill Publisher — Quality Gate
 
