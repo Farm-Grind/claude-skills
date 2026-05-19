@@ -133,15 +133,7 @@
       "enforcement": "SESSION_LEVEL \u2014 enforced via user preferences A7"
     }
   ],
-  "open_findings": [
-    {
-      "finding_id": "F-055",
-      "pattern_code": "P-06",
-      "title": "utility-session-manager @monitor never fires at session start \u2014 0/16 sessions today",
-      "artifact_affected": "utility-session-manager description field (available_skills block); user preferences (fix target)",
-      "project_scope": "UNIVERSAL"
-    }
-  ],
+  "open_findings": [],
   "pattern_recurrence": {
     "P-01": 6,
     "P-02": 4,
