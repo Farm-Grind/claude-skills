@@ -16,8 +16,8 @@ description: >
   prompt". Do NOT trigger for: design work, lore creation, or coding with no
   session lifecycle signal. Load once per session.
 ---
-gates_passed: 2026-05-19
-SKILL_VERSION: v2.2
+gates_passed: 2026-05-20
+SKILL_VERSION: v2.3
 Type: dispatcher
 
 # Universal Session Manager
