@@ -31,6 +31,9 @@ ELSE:
 ## Part 1 — GENERAL Schema (inline, no D1 lookup)
 
 ```
+RENAME_BLOCK| required | format: [WORKSTREAM] · [YYYY-MM-DD] · [plain-English session topic 5-10 words]
+             |          | placed before HANDOFF line between ─── separator lines (see Step 7 template)
+             |          | no S[N] or TASK_ID — not applicable to GENERAL mode
 SUMMARY     | required | 1-sentence plain English — what this session did and what comes next.
              |          | No F-XX/P-XX codes. Appears before NEXT in the user-pasteable block.
 WORKSTREAM  | required | prompt if absent: "What's the workstream name for this session?"
@@ -38,6 +41,8 @@ STOPPED_AT  | required | min 2 sentences — what is done, what is not
 IN_FLIGHT   | required | task in progress or "None"
 NEXT_ACTION | required | specific and actionable — the single first step to take
 OPEN_CONTEXT| optional | facts that live only in this conversation; "None" if nothing passes
+DB          | required | carry-forward DB section — IDs, PAT retrieval key, repo path
+             |          | format: see Step 7 template; "None" if no DB or repo used this session
 ```
 
 ---
@@ -78,7 +83,7 @@ For each required field in schema: if empty → ERROR. No write proceeds.
 
 **Step 2: Run gates (order matters)**
 PROJECT mode: RENAME_BLOCK_GATE → HANDOFF_CONTENT_GATE P1 → write → P2 → P3
-GENERAL mode: HANDOFF_CONTENT_GATE P1 → write → P2 → P3
+GENERAL mode: RENAME_BLOCK_GATE (WARN) → DB_BLOCK_GATE (WARN) → HANDOFF_CONTENT_GATE P1 → write → P2 → P3
 
 **Step 3: Read current row + capture version**
 ```sql
@@ -186,6 +191,10 @@ LAST SYNCED: [tables + datetime]
 
 GENERAL mode (stored block):
 ```
+RENAME BLOCK
+────────────────────────────────────────
+[WORKSTREAM] · [YYYY-MM-DD] · [plain-English session topic — 5-10 words]
+────────────────────────────────────────
 HANDOFF — [date]
 WORKSTREAM: [value]
 STOPPED AT: [text]
@@ -193,19 +202,40 @@ IN FLIGHT: [task or None]
 NEXT ACTION: [step]
 OPEN CONTEXT: [constraints or None]
 
+**DB:**
+- [db-name]: [db-id]
+- PAT: SELECT value FROM secrets WHERE key = 'GITHUB_PAT'
+- cs-work: /home/claude/cs-work (clone if absent)
+
 ✓ Stored — claude-config / key=[key] / v[N]
   Paste this block as the first message to resume.
+  Rename this chat: [WORKSTREAM] · [YYYY-MM-DD] · [session topic]
 ```
 
 ---
 
 ## Gates
 
-**RENAME_BLOCK_GATE** (PROJECT mode only)
+**RENAME_BLOCK_GATE** (PROJECT mode — HALT on failure; GENERAL mode — WARN only)
+
+PROJECT mode:
 - Format: `[WORKSTREAM] · S[N] · [TASK_ID]`
 - All fields from D1 — never inferred from memory
 - Exactly 4 backticks (2 open, 2 close)
 - Failure: HALT
+
+GENERAL mode (HV-13W — warn, not halt):
+- Format: `[WORKSTREAM] · [YYYY-MM-DD] · [plain-English session topic]`
+- No S[N] or TASK_ID — not applicable to GENERAL mode
+- Must appear as a standalone section header line between ─── separator lines
+- Failure: WARN (not HALT — initial rollout; candidate for HALT promotion after audit cycle)
+- Enforced by: validate_handoff.py HV-13W
+
+**DB_BLOCK_GATE** (GENERAL mode — WARN only)
+- DB carry-forward section must be present in the handoff block
+- Must contain at least one DB entry, or explicit "None" if no DB used
+- Failure: WARN (not HALT — initial rollout; candidate for HALT promotion after audit cycle)
+- Enforced by: validate_handoff.py HV-14W
 
 **HANDOFF_CONTENT_GATE** (both modes)
 - P1: evidence block visible before write — HARD FAIL if absent
