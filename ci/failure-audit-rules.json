@@ -151,8 +151,8 @@
     {
       "finding_id": "F-059",
       "pattern_code": "P-05",
-      "title": "DECISION LOGGING\u2014IMMEDIATE not followed \u2014 no structural enforcement",
-      "artifact_affected": "project instructions ALWAYS ACTIVE \u2014 DECISION LOGGING + loop-core-decisions skill",
+      "title": "DECISION LOGGING\u2014IMMEDIATE not followed \u2014 wrong skill named in fix (WL compound)",
+      "artifact_affected": "project instructions ALWAYS ACTIVE \u2014 DECISION LOGGING + utility-session-manager @briefing",
       "project_scope": "UNIVERSAL"
     },
     {
