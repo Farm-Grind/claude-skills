@@ -44,6 +44,22 @@ Gates (FAIL unless noted):
            codes not immediately followed by a parenthetical description.
            Each match emits a WARN line. Gradual rollout: fix before next
            audit cycle.
+    HV-13  [WARN only — does not cause FAIL] GENERAL mode handoff should
+           include a RENAME BLOCK section before the HANDOFF line, in format:
+             RENAME BLOCK
+             ────────────────────────────────────────
+             [WORKSTREAM] · [YYYY-MM-DD] · [session topic]
+             ────────────────────────────────────────
+           Enables chat session findability via recent_chats searches.
+           Initial rollout: WARN only. Candidate for FAIL after audit cycle.
+    HV-14  [WARN only — does not cause FAIL] GENERAL mode handoff should
+           include a DB block as a carry-forward section:
+             **DB:**
+             - [db-name]: [db-id]
+             - PAT: SELECT value FROM secrets WHERE key = 'GITHUB_PAT'
+             - cs-work: /home/claude/cs-work (clone if absent)
+           Use "None" if no DB or repo is used this workstream.
+           Initial rollout: WARN only. Candidate for FAIL after audit cycle.
 """
 
 import re
@@ -259,6 +275,108 @@ def hv_12w_bare_codes(block: str) -> list[str]:
     return warnings
 
 
+def hv_13w_rename_block(block: str) -> list[str]:
+    """
+    HV-13W (WARN — not a FAIL gate): GENERAL mode handoff should include a
+    RENAME BLOCK section before the HANDOFF line. Expected format:
+
+        RENAME BLOCK
+        ────────────────────────────────────────
+        [WORKSTREAM] · [YYYY-MM-DD] · [session topic]
+        ────────────────────────────────────────
+
+    Enables chat session findability via recent_chats workstream searches.
+    Initial rollout: WARN only. Candidate for FAIL promotion after audit cycle.
+    Addresses: session findability gap (GENERAL mode untitled sessions).
+
+    Detection: "RENAME BLOCK" must appear as a standalone line (at start of line,
+    not embedded in another field's content) to avoid false positives when
+    "RENAME BLOCK" appears in CONTEXT or SUMMARY text.
+    """
+    warnings = []
+
+    # Only match "RENAME BLOCK" as a standalone line header (not inside a sentence/field)
+    # Must start at the beginning of a line, optionally with whitespace
+    has_rename_section = bool(re.search(
+        r'^\s*RENAME BLOCK\s*$', block, re.IGNORECASE | re.MULTILINE
+    ))
+
+    if not has_rename_section:
+        warnings.append(
+            "  HV-13W    WARN  RENAME BLOCK section absent — add before HANDOFF line:\n"
+            "              RENAME BLOCK\n"
+            "              ────────────────────────────────────────\n"
+            "              [WORKSTREAM] · [YYYY-MM-DD] · [session topic]\n"
+            "              ────────────────────────────────────────\n"
+            "             Enables session findability in recent_chats searches."
+        )
+        return warnings
+
+    # RENAME BLOCK section header present — check the 3 lines immediately following
+    # for proper format. Do NOT capture 300 chars (the SUMMARY/CONTEXT fields may
+    # contain · characters that would produce false-pass on format check).
+    m = re.search(
+        r'^\s*RENAME BLOCK\s*\n([^\n]*)\n([^\n]*)\n([^\n]*)',
+        block, re.IGNORECASE | re.MULTILINE
+    )
+    if m:
+        line1 = m.group(1)  # expected: ─── separator
+        line2 = m.group(2)  # expected: [WORKSTREAM] · [DATE] · [topic]
+        line3 = m.group(3)  # expected: ─── separator
+        if '·' not in line2:
+            warnings.append(
+                f"  HV-13W    WARN  RENAME BLOCK content line has no · separator — "
+                f"expected: \"[WORKSTREAM] · [YYYY-MM-DD] · [session topic]\", "
+                f"got: \"{line2.strip()[:60]}\""
+            )
+        if not re.search(r'─{4,}', line1) and not re.search(r'─{4,}', line3):
+            warnings.append(
+                "  HV-13W    WARN  RENAME BLOCK missing ─── separator lines — "
+                "add ──────────────────────────────────────── above and below the rename line"
+            )
+
+    return warnings
+
+
+def hv_14w_db_block(block: str) -> list[str]:
+    """
+    HV-14W (WARN — not a FAIL gate): GENERAL mode handoff should include a DB
+    carry-forward block. Expected format:
+
+        **DB:**
+        - [db-name]: [db-id]
+        - PAT: SELECT value FROM secrets WHERE key = 'GITHUB_PAT'
+        - cs-work: /home/claude/cs-work (clone if absent)
+
+    Formalises the informal DB carry-forward pattern present in GENERAL mode
+    sessions — required for bootstrapping (clone, PAT, DB IDs) at session start.
+    Use "None" if no DB or repo is used in this workstream.
+    Initial rollout: WARN only. Candidate for FAIL promotion after audit cycle.
+    """
+    warnings = []
+
+    # Accept both formal (**DB:**) and informal (- claude-config: ...) patterns
+    has_db_label = bool(re.search(
+        r'\*\*DB[:\*\*]|^DB\s*:', block, re.IGNORECASE | re.MULTILINE
+    ))
+    has_db_entries = bool(re.search(
+        r'^-\s+(claude-config|the-loop-storage|PAT\s*:|cs-work)',
+        block, re.IGNORECASE | re.MULTILINE
+    ))
+
+    if not has_db_label and not has_db_entries:
+        warnings.append(
+            "  HV-14W    WARN  DB block absent — add carry-forward DB section:\n"
+            "              **DB:**\n"
+            "              - [db-name]: [db-id]\n"
+            "              - PAT: SELECT value FROM secrets WHERE key = 'GITHUB_PAT'\n"
+            "              - cs-work: /home/claude/cs-work (clone if absent)\n"
+            "             Use \"None\" if no DB or repo is used in this workstream."
+        )
+
+    return warnings
+
+
 # ── Runner ────────────────────────────────────────────────────────────────────
 
 def validate(text: str) -> int:
@@ -334,6 +452,22 @@ def validate(text: str) -> int:
             print(w)
     else:
         _print("HV-12W", "No bare F-XX/P-XX codes in scanned fields", True, "clean")
+
+    # HV-13W (warn only — does not increment fails)
+    rename_warnings = hv_13w_rename_block(block)
+    if rename_warnings:
+        for w in rename_warnings:
+            print(w)
+    else:
+        _print("HV-13W", "RENAME BLOCK present and formatted", True, "clean")
+
+    # HV-14W (warn only — does not increment fails)
+    db_warnings = hv_14w_db_block(block)
+    if db_warnings:
+        for w in db_warnings:
+            print(w)
+    else:
+        _print("HV-14W", "DB block present", True, "clean")
 
     print()
     if fails:
