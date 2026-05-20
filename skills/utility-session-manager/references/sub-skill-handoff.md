@@ -9,7 +9,28 @@ by @monitor when HANDOFF ALERT fires.
 
 ---
 
-## Step 0 — DB and Mode Routing
+## Step 0a — NO_HANDOFF Path
+
+If close signal includes "no handoff" (any of: "no handoff", "close out, no handoff",
+"end session, no handoff", "wrap up, no handoff"):
+
+1. Skip Steps 1–6 entirely — no D1 reads, no writes, no content gates.
+2. Derive rename block fields from session context:
+   - WORKSTREAM: from session_handoff CURRENT row fetched at session start (or session context)
+   - S[N]: session number from same source
+   - TASK_ID: from last active ops_queue item, or omit if none
+3. Produce rename block only (PROJECT mode format):
+
+```
+[WORKSTREAM] · S[N] · [TASK_ID]
+```
+
+No fenced block, no handoff content, no ✓ Stored line. Rename block is the
+entire close output. Stop here — do not continue to Step 0b.
+
+---
+
+## Step 0b — DB and Mode Routing
 
 ```
 IF project_id is set AND session_config exists for project_id:
@@ -84,6 +105,7 @@ For each required field in schema: if empty → ERROR. No write proceeds.
 **Step 2: Run gates (order matters)**
 PROJECT mode: RENAME_BLOCK_GATE → HANDOFF_CONTENT_GATE P1 → write → P2 → P3
 GENERAL mode: RENAME_BLOCK_GATE (WARN) → DB_BLOCK_GATE (WARN) → HANDOFF_CONTENT_GATE P1 → write → P2 → P3
+Note: Step 2 only reached via Step 0b (full handoff path) — Step 0a exits before here.
 
 **Step 3: Read current row + capture version**
 ```sql
