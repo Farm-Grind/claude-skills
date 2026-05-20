@@ -184,3 +184,79 @@ sync that was squash-merged. This is common when multiple D1 writes occur in one
 **Detection:** Without `--force-push`, sync-failure-rules.py will print
 `ERROR: git push failed:` with the rejection message and exit code 2. Re-run with
 `--force-push` to resolve.
+
+---
+
+## PROC-06 — Diverged Branch Merge Recovery
+
+**Problem:** When attempting to merge a PR via the GitHub API, the merge call returns
+`mergeable_state: behind` (or `mergeable: false`) because the feature branch has fallen
+behind `main`. Claude has historically deferred these cases to the user (F-056, P-09,
+3 recurrences). This is solvable autonomously.
+
+**Trigger:** API merge call returns `mergeable_state` of `behind`, `dirty`, or
+`mergeable: false` — AND the branch is simply behind main (not in a genuine conflict).
+
+**Detection step — check compare endpoint first:**
+```bash
+curl -s -H "Authorization: token $PAT" \
+  "https://api.github.com/repos/Farm-Grind/claude-skills/compare/main...HEAD_SHA" \
+  | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+print('behind_by:', d.get('behind_by'))
+print('ahead_by:', d.get('ahead_by'))
+print('status:', d.get('status'))
+"
+```
+- `behind_by == 0`: branch is not behind — investigate other causes.
+- `behind_by > 0, status == 'behind'`: apply PROC-06 recovery below.
+- `status == 'diverged'`: may have genuine conflicts — attempt rebase and check for
+  conflict markers before force-pushing.
+
+**Recovery procedure:**
+```bash
+# 1. Ensure repo is up to date
+cd /home/claude/cs-work
+git fetch origin main
+
+# 2. Check out the feature branch
+git checkout <feature-branch>
+
+# 3. Rebase onto main
+git rebase origin/main
+
+# If rebase reports conflicts: STOP — do not force-push. Report to user with
+# the conflicting files listed. Autonomous resolution ends here.
+
+# 4. Force-push with lease (safe — rejects if remote tip changed since fetch)
+git push --force-with-lease origin <feature-branch>
+
+# 5. Wait for CI (poll check-runs every 30s, up to 5 minutes)
+SHA=$(git rev-parse HEAD)
+for i in $(seq 1 10); do
+  sleep 30
+  STATUS=$(curl -s -H "Authorization: token $PAT" \
+    "https://api.github.com/repos/Farm-Grind/claude-skills/commits/${SHA}/check-runs" \
+    | python3 -c "import json,sys; runs=json.load(sys.stdin).get('check_runs',[]); \
+      print('pass' if all(r['conclusion']=='success' for r in runs if r['status']=='completed') \
+      and runs else 'pending')")
+  echo "CI: $STATUS"
+  [ "$STATUS" = "pass" ] && break
+done
+
+# 6. Retry merge
+curl -s -X PUT \
+  -H "Authorization: token $PAT" \
+  -H "Content-Type: application/json" \
+  -d '{"merge_method":"squash"}' \
+  "https://api.github.com/repos/Farm-Grind/claude-skills/pulls/<PR_NUMBER>/merge"
+```
+
+**When to stop and defer to user:**
+- Rebase produces merge conflicts (files listed above)
+- Force-push rejected even with `--force-with-lease` (remote tip changed — another
+  push landed between fetch and push)
+- CI fails after rebase (test failure unrelated to diverge)
+
+**Scope:** Applies to any PR merge in this repo. Not limited to sync branches.

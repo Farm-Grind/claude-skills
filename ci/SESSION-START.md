@@ -1,7 +1,7 @@
 # Failure Audit System — Session Start & Architecture
 
 **Location:** ci/SESSION-START.md  
-**Last updated:** 2026-05-18 (session 3)
+**Last updated:** 2026-05-19 (session 4 — F-056: PROC-06 diverged branch merge)
 
 This document is the authoritative reference for bootstrapping a failure audit session
 and understanding the enforcement architecture. It is the fallback when the handoff
@@ -26,6 +26,9 @@ git clone https://<PAT>@github.com/Farm-Grind/claude-skills.git /home/claude/cs-
 Check GitHub for any open PRs with head branch matching `sync/failure-audit-*`.
 If found: wait for CI, merge before proceeding. The repo JSON must be on main
 before running the open findings gate.
+
+If merge is blocked because the branch is behind main (`mergeable_state: behind`):
+apply PROC-06 (ci/OPERATING-PROCEDURES.md) — rebase autonomously, do not defer to user.
 
 **Step 3 — Emit open findings SQL:**
 ```bash
