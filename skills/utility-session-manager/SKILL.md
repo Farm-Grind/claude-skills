@@ -17,7 +17,7 @@ description: >
   session lifecycle signal. Load once per session.
 ---
 gates_passed: 2026-05-20
-SKILL_VERSION: v2.3
+SKILL_VERSION: v2.4
 Type: dispatcher
 
 # Universal Session Manager
