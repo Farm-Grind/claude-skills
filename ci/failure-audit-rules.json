@@ -224,6 +224,13 @@
       "title": "Action taken without user permission",
       "artifact_affected": "behavioral \u2014 no structural permission gate",
       "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-070",
+      "pattern_code": "P-14",
+      "title": "Installed skills missing from skill_registry \u2014 never added to D1",
+      "artifact_affected": "skill_registry D1 table \u2014 missing INSERT process for new skill installs",
+      "project_scope": "LOOP"
     }
   ],
   "pattern_recurrence": {
