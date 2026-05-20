@@ -31,6 +31,8 @@ ELSE:
 ## Part 1 — GENERAL Schema (inline, no D1 lookup)
 
 ```
+SUMMARY     | required | 1-sentence plain English — what this session did and what comes next.
+             |          | No F-XX/P-XX codes. Appears before NEXT in the user-pasteable block.
 WORKSTREAM  | required | prompt if absent: "What's the workstream name for this session?"
 STOPPED_AT  | required | min 2 sentences — what is done, what is not
 IN_FLIGHT   | required | task in progress or "None"
@@ -147,7 +149,25 @@ Compare all fields. Confirm version = captured_version + 1.
 
 **Step 7: Output**
 
-PROJECT mode:
+The user-pasteable handoff block must follow this template exactly (field order
+is mandatory; SUMMARY appears first, before NEXT):
+
+```
+**SUMMARY:** [1-sentence plain English — what this session did and what comes next. No codes.]
+
+**NEXT:** [Plain-English task title — key noun or verb first, max 10 words] [(ticket ID if applicable)]
+
+**CONTEXT:** [1–3 sentences — precedent, stakes, what depends on it]
+
+**RECOMMENDATION:** [Why this matters — what breaks or degrades if not done. One sentence.]
+
+**ACTION REQUIRED:**
+  • [Specific action]
+
+**BLOCKS:** [What cannot proceed until this is resolved. Omit if nothing downstream.]
+```
+
+PROJECT mode (full output with rename block):
 ```
 RENAME BLOCK
 ────────────────────────────────────────
@@ -164,7 +184,7 @@ LAST SYNCED: [tables + datetime]
 ✓ Stored — [db] / key=[key] / v[N]
 ```
 
-GENERAL mode:
+GENERAL mode (stored block):
 ```
 HANDOFF — [date]
 WORKSTREAM: [value]
