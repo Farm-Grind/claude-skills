@@ -26,28 +26,6 @@ With 8+ servers: treat as starting at 80–90%. Effective space ~20–40K.
 
 ---
 
-## Part 1.5 — Skill Registry Sync Check
-
-Run once at session start only. Fires immediately after Part 1. Silent when clean.
-
-1. Query D1 `skills` table: `SELECT name, status FROM skills ORDER BY name`
-   - Database: `claude-config` (`afd78e0e-583e-4e78-87fc-dd6bc8150ce9`)
-2. Compare against skill names present in `available_skills` in current context:
-   - **Not registered:** skill in `available_skills` with no matching row in D1 → flag
-   - **Deactivated without D1 update:** skill in D1 with `status = 'INSTALLED'` not present in `available_skills` → flag
-   - STAGED skills absent from `available_skills`: expected — do not flag
-3. If no discrepancy: silent. If any discrepancy:
-
-```
-⚠ SKILL REGISTRY DRIFT
-  Not registered (in available_skills, absent from D1): [list or "none"]
-  Deactivated (INSTALLED in D1, not in available_skills): [list or "none"]
-  Action: run skill registry sync before any skill work this session.
-```
-
-HARD FAIL: if D1 query fails (connection error), emit ERROR — do not silently skip.
-
----
 
 ## Part 2 — Session State Machine
 
