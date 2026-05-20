@@ -12,12 +12,11 @@ description: >
   user says "that was wrong" / "you got that wrong" / "that's incorrect" mid-session,
   Claude catches its own error pre-output via output-gate or any internal check (self-reporting).
   Do NOT use for: single isolated one-off correction with no recurrence signal;
-  lore canon checks; pre-delivery quality gate (use utility-core-output-gate);
-  real-time session monitoring (use utility-core-session-monitor).
+  lore canon checks; pre-delivery quality gate; real-time session monitoring.
   Load once per session.
 ---
 gates_passed: 2026-05-19
-SKILL_VERSION: v1.8.0
+SKILL_VERSION: v1.7.0
 
 # utility-issue-triage
 
@@ -227,16 +226,14 @@ Q4: If this fix had been in place, would the diagnosed conversation have produce
   Uncertain → flag explicitly. For HB: Uncertain = defer to fresh-context per Rule 8.
 ```
 For BEHAVIORAL/TEMPORAL fixes: mark UNCERTAIN by default unless specific transcript evidence shows mechanism was addressable in-context.
-**Confirmation block (required for any Fix Block with structural or temporal fixes):**
+**Confirmation block (required for any Fix Block with structural fixes):**
 ```
 Fix Block self-review:
   [Fix ID]  Mechanism: [stated]  Layer: [named]  Survives mechanism: [Yes/No]
             Q4: [Yes / No / Uncertain — reason]
-            STRUCTURAL considered: [documented — evaluated / adopted / rejected with reason]
   Status: CLEAR to deliver / BLOCKED — [reason]
 ```
-HARD FAIL: Do not deliver a Fix Block with structural or temporal fixes without this block.
-HARD FAIL: STRUCTURAL considered field absent from self-review block — cannot deliver.
+HARD FAIL: Do not deliver a Fix Block with structural fixes without this block.
 ---
 
 ## PART 4c — FIX QUALITY GATE
@@ -289,9 +286,7 @@ Fixes
   P-001  Add: user preferences A7 to Q-RC3 scope in system prompt §3
 Fix Block self-review:
   P-001  Mechanism: A7 absent from Q-RC3 scope  Layer: system prompt  Survives mechanism: Yes
-         Q4: Yes
-         STRUCTURAL considered: evaluated — system prompt addition is STRUCTURAL; adopted.
-  Status: CLEAR to deliver
+         Q4: Yes  Status: CLEAR to deliver
 Queue  OPS-041 (P2-blocking, skill-edit, QUEUED)
 Log    ERR-014 (FMT, HIGH, OPEN)
 ```
@@ -307,7 +302,7 @@ Critical
 Fixes
   HB finding — fix proposal deferred to fresh-context session per Rule 8.
 DIAG-handoff:
-  Failure segment: [transcript ref]  Prior fix: B-check added to utility-core-output-gate §3
+  Failure segment: [transcript ref]  Prior fix: B-check added to output-gate skill §3 (now retired)
   Diagnostic question: What skill IS loaded in sprint sessions? Fix must target that layer.
 Fix Block self-review:  HB — no fix proposed this session.
 Queue  none
@@ -403,7 +398,7 @@ Step 2b fix-type gate applies. Self-reported entries use the same INSERT pattern
 - Does NOT auto-detect session quality — requires explicit invocation.
 - Does NOT verify lore canon — use project lore-checker for LC findings.
 - Does NOT generate code fixes — use project code-guardian.
-- Does NOT monitor context length — use utility-core-session-monitor.
+- Does NOT monitor context length — @monitor in utility-session-manager handles this.
 - DOES write findings to claude-config granular_findings automatically — see PART 5.
 - Does NOT write to ops_queue or error_log autonomously — EXCEPT via self-reporting protocol (PART 5b); all other error_log writes execute only after fix is validated.
 
@@ -413,8 +408,6 @@ Step 2b fix-type gate applies. Self-reported entries use the same INSERT pattern
 
 | Skill / Resource | Domain |
 |---|---|
-| utility-core-output-gate | Pre-delivery checks A1–A8 and B1–B10 |
-| utility-core-session-monitor | Context length and drift signals |
 | error_log (D1: the-loop-storage) | Source for self-reporting, WONT_FIX, and recurrence cross-ref — table: error_log, columns: id, description, root_cause, severity, status, fix_applied |
 | cloudflare-storage_v1_3 | D1 query patterns, schema, queue submission |
 | triage-reference_v1 | Constraint budget, removal-before-addition protocol |
