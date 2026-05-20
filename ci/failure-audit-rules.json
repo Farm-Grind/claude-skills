@@ -135,10 +135,31 @@
   ],
   "open_findings": [
     {
-      "finding_id": "F-056",
-      "pattern_code": "P-09",
-      "title": "PR merge deferred to user when diverged branch blocks auto-merge \u2014 3 sessions",
-      "artifact_affected": "PR merge procedure \u2014 session start / handoff blocks; ci/SESSION-START.md",
+      "finding_id": "F-057",
+      "pattern_code": "P-05",
+      "title": "SESSION START never executed \u2014 omission rule decay on conversational first message",
+      "artifact_affected": "project instructions SESSION START + user preferences SESSION START block",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-058",
+      "pattern_code": "P-13",
+      "title": "GATE 1b never fired \u2014 omission rule decay",
+      "artifact_affected": "project instructions ALWAYS ACTIVE \u2014 GATE 1b",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-059",
+      "pattern_code": "P-05",
+      "title": "DECISION LOGGING\u2014IMMEDIATE not followed \u2014 no structural enforcement",
+      "artifact_affected": "project instructions ALWAYS ACTIVE \u2014 DECISION LOGGING + loop-core-decisions skill",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-060",
+      "pattern_code": "P-11",
+      "title": "BRAINSTORM MODE not reconciled with WORLD domain \u2014 naming output unchanged after skill load",
+      "artifact_affected": "persona-creative-writer references/cross-domain-map.md",
       "project_scope": "UNIVERSAL"
     }
   ],
