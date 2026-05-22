@@ -1,25 +1,23 @@
 ---
 name: utility-data-analyst
 description: >
-  Universal public-source research and synthesis skill. Produces synthesis
-  documents for skills, GDDs, reference docs, and design decisions.
-  Integrates papers, vendor docs, practitioner blogs, MCP schemas, and
-  community consensus. Use automatically — do not wait to be asked.
-  Trigger on ANY of these signals: "research", "best practices for",
-  "deep dive", "quick check", "is this current", "triple pass", "live
-  schema", "function reference", "MCP research", "tool research",
-  "landscape scan", "horizon scan", "session retrospective", "root
-  cause"; section needs grounding; coverage is thin or stale;
-  cross-industry analogue needed; a tool, API, or MCP needs reference
-  documentation. Implicit triggers: skill edit on a changing-practice
-  domain; design solution proposed without confirming prior research.
-  Do NOT trigger for: factual lookup answerable from training data with
-  no synthesis needed; locked project decisions; lore canon checks;
-  purchase recommendations (use life-core-shopping). Load once per
-  session.
+  Universal public-source research and synthesis skill. Covers synthesis
+  documents for skills, GDDs, reference docs, design decisions, AND consumer
+  product/software purchase recommendations. Use automatically — do not wait
+  to be asked. Trigger on: "research", "best practices for", "deep dive",
+  "quick check", "triple pass", "live schema", "function reference", "MCP
+  research", "landscape scan", "horizon scan", "session retrospective", "root
+  cause"; coverage is thin or stale; tool/API/MCP needs reference docs.
+  ALSO trigger for purchase/product signals: "recommend a [product]", "best X
+  for", "should I get", "which is better", "I need a [thing]", "help me find",
+  "shopping for", "compare [products]", user names product category without a
+  model. Implicit: skill edit on changing-practice domain; design solution
+  without prior research. Do NOT trigger for: factual lookups; locked
+  decisions; lore canon checks; B2B procurement; services (not products).
+  Load once per session.
 ---
-gates_passed: 2026-05-17
-SKILL_VERSION: v1.2
+gates_passed: 2026-05-22
+SKILL_VERSION: v2.2
 
 # Data Analyst — Public-Source Research and Synthesis
 
@@ -47,6 +45,12 @@ Failure modes Claude exhibits without this skill. Documented from session eviden
 6. **Training knowledge as research** — synthesizes from training data in fast-moving domain without external verification, presents as researched. F6. Structural fix: SYNTHESIS MODE: TRAINING KNOWLEDGE header explicit. Training-knowledge findings cannot be labeled [VERIFIED].
 7. **Pass independence theater** — verification pass reuses prior-pass sources in a different configuration. Structural fix: VERIFICATION PASS requires `New sources not in Pass 1: N` field with N>0 for any verification claim.
 8. **Synthesis overclaim** — "established", "proven", "best practice" used on single-source findings. Structural fix: adversarial Challenge 1 blocks delivery until per-finding confidence tag matches the evidential chain.
+9. **[Consumer Research] Defaulting to search-snippet prices** — snippets are cached and stale. Always fetch or label `[unverified — check live]`. Phase 3 Step 5 of consumer-research.md defines the exact protocol; running from memory produces wrong price data.
+10. **[Consumer Research] Skipping activity-level intake for apparel** — "low activity" is not a safe default. A product suited for sedentary wear fails active use. Ask before Phase 2 routes to sources.
+11. **[Consumer Research] Amazon fetch attempts** — Amazon robots.txt blocks Anthropic crawlers. Every Amazon fetch returns a 403 or robots error. Never attempt; redirect user to check the live page.
+12. **[Consumer Research] Stale source articles** — "Best of [year]" lists older than 12 months produce outdated picks. Always verify publication date; search for a fresher version if stale.
+13. **[Consumer Research] Not re-evaluating finalists after constraint refinement** — adding a constraint invalidates prior picks. Re-run Phases 3-5 in full; never assume existing finalists still qualify.
+14. **Session-end flush silently skipped** — PART 13 fires on explicit commits but not at session close. Validated findings evaporate. Structural fix: PART 13 has two named trigger conditions; session-end auto-flush is the second. If no [VERIFIED] or [MULTI-SOURCE] findings were produced this session, the flush is a no-op.
 
 ---
 
@@ -57,12 +61,12 @@ Run first, before anything else.
 | Destination | Route |
 |---|---|
 | Synthesis document for skill, GDD, reference doc, or design decision | Continue to Part 0.5 |
-| Purchase or product/app recommendation | Stop — load life-core-shopping |
+| Purchase or product/app recommendation | Consumer Research mode — continue to Part 0.5, declare mode at Part 1 |
 | Lore canon verification on a project with a lore-checker | Stop — load the project lore-checker |
 | Single-fact lookup answerable from current chat context | Stop — answer directly |
-| Unclear | Ask once: "Is this feeding into a document, or a different kind of decision?" |
+| Unclear | Ask once: "Is this feeding into a document, a purchase decision, or a different kind of decision?" |
 
-Purchase signals to redirect: "which product", "what should I get", "which is best for me", "help me find a [thing]", "recommend a [thing]".
+Purchase signals: "which product", "what should I get", "which is best for me", "help me find a [thing]", "recommend a [thing]", user names a product category without a model.
 
 ---
 
@@ -102,6 +106,7 @@ Mode determines depth, source requirements, and output structure. Mode declarati
 | Creative Synthesis | Training-knowledge synthesis (lore, archetype, taxonomy, stable concepts) | `references/research-patterns.md §5` |
 | Landscape Scan | Orientation without a decision; mapping a space | `references/research-patterns.md §6` |
 | Session Retrospective | Root-cause analysis of recurring session problems | `references/research-patterns.md §7` |
+| Consumer Research | Purchase or product/app recommendation; consumer goods comparison | `references/consumer-research.md` |
 
 Ambiguous signal → default to Quick Audit. Surface prior coverage; ask whether to escalate.
 
@@ -128,6 +133,9 @@ view /mnt/skills/user/utility-data-analyst/references/full-pass-methodology.md
 # Triple Pass, Architecture Decision, Function Reference, Skill/Document Audit,
 # Creative Synthesis, Landscape Scan, Session Retrospective:
 view /mnt/skills/user/utility-data-analyst/references/research-patterns.md
+
+# Consumer Research:
+view /mnt/skills/user/utility-data-analyst/references/consumer-research.md
 ```
 
 Also load at first synthesis output (all modes):
@@ -140,7 +148,7 @@ For D1 commits (PART 13 gate only):
 view /mnt/skills/user/utility-data-analyst/references/d1-validation.md
 ```
 
-Reference files do not persist between turns. Re-issue `view` at each turn
+Reference files do not persist across turns. Re-issue `view` at each turn
 that needs them. No view output = running from memory = HARD FAIL.
 
 ---
@@ -159,8 +167,19 @@ stated. Maximum 2 questions, in a single message.
 
 ## PART 13 — RESEARCH DATABASE GATE
 
-Fires when any research finding is being committed to D1. HARD FAIL: INSERT
-must not execute without the visible gate block below.
+Two triggers — run on either:
+1. **Explicit commit:** user requests a specific finding be written to D1.
+2. **Session-end auto-flush:** at session close (user says "wrap up", "close out",
+   "save handoff", or session-manager fires @handoff), collect every [VERIFIED]
+   or [MULTI-SOURCE] finding produced this session and run this gate for each
+   in sequence. If no qualifying findings exist: no-op, skip silently.
+
+Default behavior: **prefer UPDATE over INSERT**. Run Step 3 (dedup) first to
+find the nearest existing entry in the same category. UPDATE if the finding
+substantively overlaps an existing entry. INSERT only when the finding is
+genuinely novel — no existing row covers the same mechanism with similar guidance.
+
+HARD FAIL: INSERT or UPDATE must not execute without the visible gate block below.
 
 Load `references/d1-validation.md` first. Run Step 1 (validate_research.py),
 Step 2 (failure pattern check), Step 3 (dedup check) in order.
@@ -170,21 +189,22 @@ RESEARCH DB GATE — [research_id]
 Step 1 RQG script:    [PASS / WARN (confirmed) / FAIL — blocked]
 Step 2 pattern check: [no matches / P-XX flagged — warning updated]
 Step 3 dedup:         [N in category, no near-duplicates / duplicate — decision]
-Decision:             [INSERT / UPDATE R-XXX / DISCARD]
+Decision:             [INSERT new entry / UPDATE R-XXX (fields: <list>) / DISCARD]
 ```
 
-HARD FAIL if this block is absent or any step shows FAIL before INSERT runs.
+HARD FAIL if this block is absent or any step shows FAIL before INSERT or UPDATE runs.
 
 ---
 
 ## Out of Scope
 
 This skill does NOT:
-- Recommend products or apps for purchase (use life-core-shopping)
+- Handle enterprise or B2B software procurement or SaaS licensing decisions
 - Verify lore canon on projects with a dedicated lore-checker
 - Generate GDD sections, dialogue, or design docs directly — synthesis feeds those
 - Answer factual lookups answerable from chat context with no synthesis required
 - Conduct private-dataset statistical analysis — public-source synthesis only
+- Handle services (not products or software), investment/financial products, or real estate
 
 ---
 
@@ -195,9 +215,9 @@ This skill does NOT:
 | references/full-pass-methodology.md | Full Pass methodology, synthesis format, citation rules, adversarial review, verification pass, Quick Audit, Spot Check, common failure patterns |
 | references/research-patterns.md | 7 specialized research patterns — triple-pass, architecture-decision, function-reference, skill-audit, creative-synthesis, landscape-scan, session-retrospective |
 | references/source-authority.md | Source authority scoring framework, labels, red flags |
+| references/consumer-research.md | Consumer Research mode — purchase decisions, product comparison, source tiers, price verification, comparison table format (absorbed from retired life-core-shopping) |
 | references/d1-validation.md | Research database validation protocol — PART 13 gate steps, SQL patterns, RQG script usage |
-| life-core-shopping | Product and app purchase recommendations |
-| utility-skill-publisher | Consumes research output during Gate 0 of new skill creation |
+| utility-skill-builder | Consumes research output during Gate 0 of new skill creation |
 | AGENTIF benchmark | Multi-constraint instruction compliance |
 | AutoVerifier — arxiv 2604.02617 | Structured claim verification methodology |
 | Deep Researcher Sequential Plan Reflection — arxiv 2601.20843 | Sequential pass validity |
@@ -216,4 +236,6 @@ This skill does NOT:
 
 **Example 4 — Creative Synthesis from training knowledge.** Cross-tradition relic archetype synthesis. Mode = Creative Synthesis; load `references/research-patterns.md §5`. Header: SYNTHESIS MODE: TRAINING KNOWLEDGE — claims not externally verified. Parts 3 and 6 skipped. Per-domain sweep, N≥3 threshold for composite formation. No finding labeled [VERIFIED]; all carry [TRAINING KNOWLEDGE]. Challenge 1 replaced with cross-tradition threshold check.
 
-**Example 5 — Misroute caught at Part 0.** User: "what blender should I buy". Part 0 DESTINATION GATE catches purchase intent. Route to life-core-shopping. Exit.
+**Example 5 — Misroute caught at Part 0.** User: "what blender should I buy". Part 0 DESTINATION GATE: purchase intent → Consumer Research mode. Continue to Part 0.5. Declare mode = Consumer Research. PART 1.5: load `references/consumer-research.md`. Prior Cycle Check: (d) first pass. Phase 1 intake: budget, use case (daily smoothies vs. heavy-duty). Phase 2 source routing: Wirecutter, ATK, Consumer Reports. Execute Phases 3–5. Deliver comparison table and Top Pick with confidence label.
+
+**Example 6 — Consumer Research mode full pass.** User: "recommend wireless earbuds for the gym, $150 max". Part 0: purchase intent → Consumer Research mode. PRIOR CYCLE CHECK: (d) first pass. PART 1.5 load: `references/consumer-research.md`. Phase 1 intake: gym/sport use, sweat exposure, no codec preference stated. Phase 2: RTINGS first, Wirecutter, SoundGuys. Phase 3 Steps 1–4. Price fetch attempted on top picks — two verified, one labeled `[unverified — check live]`. Phase 4 table: 4 earbuds. Phase 5: Top Pick `[VERIFIED]` — both RTINGS and Wirecutter recommend for active/sport at this price range. Runner-up flagged for better call quality. Deliver.

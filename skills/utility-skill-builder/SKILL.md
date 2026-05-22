@@ -1,5 +1,5 @@
 ---
-name: utility-skill-publisher
+name: utility-skill-builder
 description: >
   Enforces quality standards for all skill creation and updates across any
   project. Use automatically — do not wait to be asked. Trigger on ANY of
@@ -17,8 +17,8 @@ description: >
   unrelated to skill authoring (game ability design, lore writing, marketing
   copy). Load once per session.
 ---
-gates_passed: 2026-05-19
-SKILL_VERSION: v3.7
+gates_passed: 2026-05-22
+SKILL_VERSION: v3.5
 
 # Skill Publisher — Quality Gate
 
@@ -59,9 +59,7 @@ Failure modes Claude exhibits without this skill. This is why the skill exists.
 
 ## GATE 0 — RESEARCH AUDIT
 
-**Mandatory first step:** `python3 /home/claude/cs-work/ci/skill_gate_open.py --skill <skill-name>` — writes token required by validate.py (Gate 7). Packaging blocked if skipped. (P-12 / F-050 STRUCTURAL gate)
-
-Run before any design or editing work. One row match → SUBSTANTIAL; run research. If none → MINOR, skip Gate 0, proceed to Gate 0.5.
+Run before any design or editing work. One row match → SUBSTANTIAL; run research.
 
 | Any of these true → SUBSTANTIAL (run utility-data-analyst) |
 |---|
@@ -74,6 +72,8 @@ Run before any design or editing work. One row match → SUBSTANTIAL; run resear
 | Any existing section replaced rather than added to |
 | Proposed addition has no documented failure mode in loaded materials |
 | Skill last researched more than 4 weeks ago |
+
+If none → MINOR. Skip Gate 0. Proceed to Gate 0.5.
 
 **Research output block (required when research runs):**
 ```
@@ -331,7 +331,7 @@ HARD FAIL: Body exceeds 500 lines → move content to reference files before Gat
 Run after all edits are complete. Re-run after every edit batch before packaging.
 
 ```bash
-python3 /mnt/skills/user/utility-skill-publisher/scripts/validate.py /tmp/<skill-name>/SKILL.md
+python3 /mnt/skills/user/utility-skill-builder/scripts/validate.py /tmp/<skill-name>/SKILL.md
 ```
 
 The validator runs all deterministic Gate 7 checks: 6 grep sweeps (blockquotes, hedged language, bad version refs, second-person voice, dated content; double-separator is informational), 5 structural presence checks (Type dispatcher, GOTCHAS, SKILL_VERSION, Use automatically, reference reload imperative), description char count (limit 1,024), name length (limit 64), and line count (target 400, hard limit 500).

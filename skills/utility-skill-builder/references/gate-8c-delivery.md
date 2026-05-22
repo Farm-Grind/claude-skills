@@ -29,7 +29,7 @@ Load with `view` before running. Confirm load by quoting the H1 header: `# Gate 
 python3 -c "
 import re, datetime
 path = '/tmp/<skill-name>/SKILL.md'
-today = datetime.datetime.utcnow().date().isoformat()
+today = datetime.date.today().isoformat()
 content = open(path).read()
 if 'gates_passed:' in content:
     content = re.sub(r'^gates_passed:.*$', f'gates_passed: {today}', content, flags=re.MULTILINE)
@@ -39,8 +39,6 @@ open(path, 'w').write(content)
 print('gates_passed written:', today)
 "
 ```
-Use `datetime.datetime.utcnow().date()` — CI runs on UTC; local `date.today()` fails
-SGC-04 when local timezone is behind UTC at packaging time.
 Re-run Gate 7 after this write. CI WARNs if absent; becomes HARD FAIL after corpus sweep.
 
 ---

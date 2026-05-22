@@ -111,10 +111,10 @@ runs corpus ceiling check on every commit. Commit blocked on scope violation or 
 
 | What you need | Where to find it |
 |---|---|
-| SQL templates for all D1 writes | skills/utility-issue-triage/references/d1-queries.md |
+| SQL templates for all D1 writes | skills/utility-failure-analyst/references/d1-queries.md |
 | Operational procedures (PROC-01–05) | ci/OPERATING-PROCEDURES.md |
-| Triage process (PART 0 through PART 5) | skills/utility-issue-triage/SKILL.md |
-| Failure taxonomy (all categories) | skills/utility-issue-triage/references/failure-taxonomy.md |
+| Triage process (PART 0 through PART 5) | skills/utility-failure-analyst/SKILL.md |
+| Failure taxonomy (all categories) | skills/utility-failure-analyst/references/failure-taxonomy.md |
 | Pattern definitions (live) | D1: SELECT * FROM failure_patterns ORDER BY pattern_code |
 | Open findings (live) | D1: SELECT * FROM granular_findings WHERE status='OPEN' |
 | Offline pattern snapshot | ci/failure-audit-rules.json |

@@ -72,7 +72,7 @@
         "P-03"
       ],
       "severity": "WARN",
-      "implementation": "grep_check: pattern='including.*itself|self.application', applies_to_skills=['utility-skill-publisher']"
+      "implementation": "grep_check: pattern='including.*itself|self.application', applies_to_skills=['utility-skill-builder']"
     }
   ],
   "behavioral_rules": [
