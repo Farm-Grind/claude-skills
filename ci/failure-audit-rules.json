@@ -2,7 +2,7 @@
   "_meta": {
     "source": "D1 claude-config / validation_rules",
     "database_id": "afd78e0e-583e-4e78-87fc-dd6bc8150ce9",
-    "last_synced": "2026-05-19",
+    "last_synced": "2026-05-22",
     "description": "Static CI mirror of failure audit validation rules. Do not edit manually \u2014 sync from D1 when rules change. See ci/sync-failure-rules.py for the sync command.",
     "total_patterns": 15,
     "total_findings": 52
@@ -135,10 +135,150 @@
   ],
   "open_findings": [
     {
-      "finding_id": "F-056",
+      "finding_id": "F-057",
+      "pattern_code": "P-05",
+      "title": "SESSION START never executed \u2014 HB recurrence of F-055",
+      "artifact_affected": "project instructions SESSION START",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-058",
+      "pattern_code": "P-13",
+      "title": "GATE 1b never fired \u2014 omission rule decay",
+      "artifact_affected": "project instructions ALWAYS ACTIVE \u2014 GATE 1b",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-059",
+      "pattern_code": "P-05",
+      "title": "DECISION LOGGING\u2014IMMEDIATE not followed",
+      "artifact_affected": "project instructions + utility-session-manager",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-060",
+      "pattern_code": "P-11",
+      "title": "BRAINSTORM MODE not reconciled with WORLD domain",
+      "artifact_affected": "persona-creative-writer",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-061",
+      "pattern_code": "P-06",
+      "title": "Fix recommendations without validating skill registry and failure database",
+      "artifact_affected": "utility-issue-triage SKILL.md",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-062",
+      "pattern_code": "P-12",
+      "title": "utility-skill-publisher not loaded before 8 skill file edits",
+      "artifact_affected": "utility-skill-publisher trigger conditions",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-063",
+      "pattern_code": "P-05",
+      "title": "Gate 1 partial reads \u2014 5 of 8 files not fully read before editing",
+      "artifact_affected": "utility-skill-publisher Gate 1",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-064",
+      "pattern_code": "P-07",
+      "title": "System Node.js absent \u2014 npx-based MCP server configs will fail",
+      "artifact_affected": "claude_desktop_config.json",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-065",
+      "pattern_code": "P-07",
+      "title": "uv/uvx absent \u2014 Python-based MCP servers require manual management",
+      "artifact_affected": "Python MCP server configs",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-066",
+      "pattern_code": "P-07",
+      "title": "Docker not confirmed installed \u2014 GitHub MCP server blocked",
+      "artifact_affected": "github MCP server",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-067",
+      "pattern_code": "P-05",
+      "title": "utility-session-manager not firing \u2014 v3.7 removed skill load",
+      "artifact_affected": "project instructions SESSION START step 2",
+      "project_scope": "LOOP"
+    },
+    {
+      "finding_id": "F-068",
+      "pattern_code": "P-14",
+      "title": "skill_registry D1 stale \u2014 retirements not written back",
+      "artifact_affected": "skill_registry D1 table",
+      "project_scope": "LOOP"
+    },
+    {
+      "finding_id": "F-069",
+      "pattern_code": "P-12",
+      "title": "Action taken without user permission \u2014 instruction-builder gate",
+      "artifact_affected": "behavioral \u2014 no structural permission gate",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-070",
+      "pattern_code": "P-14",
+      "title": "Installed skills missing from skill_registry \u2014 no INSERT process",
+      "artifact_affected": "skill_registry D1 table",
+      "project_scope": "LOOP"
+    },
+    {
+      "finding_id": "F-071",
+      "pattern_code": "P-07",
+      "title": "Claude-in-Claude API cost runaway \u2014 per-token billing not pre-established",
+      "artifact_affected": "Claude-in-Claude artifact pattern / api.anthropic.com calls",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-072",
+      "pattern_code": "P-03",
+      "title": "Self-check falsely cleared its own failing output \u2014 behavioral gate same-context",
+      "artifact_affected": "output-quality-gate SKILL.md \u2014 Sub-check A self-attestation",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-073",
       "pattern_code": "P-09",
-      "title": "PR merge deferred to user when diverged branch blocks auto-merge \u2014 3 sessions",
-      "artifact_affected": "PR merge procedure \u2014 session start / handoff blocks; ci/SESSION-START.md",
+      "title": "RENAME BLOCK: decorative scaffolding copied into deliverable",
+      "artifact_affected": "sub-skill-handoff.md Output Format + RENAME_BLOCK_GATE",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-074",
+      "pattern_code": "P-14",
+      "title": "ERR-CTX-001: stale handoff accepted without D1 cross-check",
+      "artifact_affected": "SESSION START procedure \u2014 handoff read-path",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-075",
+      "pattern_code": "P-07",
+      "title": "Platform assumption error: Windows 11-only feature recommended to Windows 10 user",
+      "artifact_affected": "output-quality-gate A1 VERIFY-FIRST taxonomy",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-076",
+      "pattern_code": "P-03",
+      "title": "utility-data-analyst session retrospective fabricated without incident data",
+      "artifact_affected": "utility-data-analyst \u2014 Session Retrospective Step 1 gate",
+      "project_scope": "UNIVERSAL"
+    },
+    {
+      "finding_id": "F-077",
+      "pattern_code": "P-09",
+      "title": "GENERAL mode sessions untitled \u2014 8+ not findable via conversation_search",
+      "artifact_affected": "sub-skill-handoff.md GENERAL schema + HV-13W/HV-14W gates",
       "project_scope": "UNIVERSAL"
     }
   ],
