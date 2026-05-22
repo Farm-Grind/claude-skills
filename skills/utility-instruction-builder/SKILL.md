@@ -18,7 +18,7 @@ description: >
   rule. Load once per session.
 ---
 gates_passed: 2026-05-22
-SKILL_VERSION: v1.0
+SKILL_VERSION: v1.1
 
 # Instruction Builder — Update and Maintenance Gate
 
