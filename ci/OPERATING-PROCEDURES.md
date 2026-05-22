@@ -11,8 +11,8 @@ Machine-enforced rules live in CI scripts. Human-judgment decisions live here.
 
 ## PROC-01 — P-06 Facsimile: Turn-Splitting Procedure
 
-**Trigger:** Any task requiring a skill that is loaded via SKILL.md (utility-issue-triage,
-utility-skill-publisher, persona-developer, etc.).
+**Trigger:** Any task requiring a skill that is loaded via SKILL.md (utility-failure-analyst,
+utility-skill-builder, persona-developer, etc.).
 
 **Problem:** A facsimile response is produced when Claude generates skill output from memory
 without actually loading the SKILL.md. This looks correct but bypasses all gates encoded

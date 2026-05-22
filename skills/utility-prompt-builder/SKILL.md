@@ -15,7 +15,8 @@ description: >
   research synthesis with no prompt output (use utility-data-analyst). Load
   once per session.
 ---
-SKILL_VERSION: v1.2
+gates_passed: 2026-05-22
+SKILL_VERSION: v1.3
 
 # Utility Prompt Builder — Dispatcher
 
@@ -249,5 +250,7 @@ This skill does NOT:
 | references/browser.md | Claude in Chrome, OpenAI Atlas, Comet, Perplexity Computer |
 | references/webtoon.md | Dashtoon, Leonardo (webtoon panels), Midjourney (webtoon backgrounds) |
 | references/cross-domain-map.md | Multi-domain conflict map |
-| utility-skill-publisher | Quality gate for this skill's creation and updates |
+
+Reference files do not persist across turns — re-view each turn that uses them.
+| utility-skill-builder | Quality gate for this skill's creation and updates |
 | utility-data-analyst | Research and synthesis (feeds this skill's reference files) |

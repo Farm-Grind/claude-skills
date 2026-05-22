@@ -13,11 +13,12 @@ description: >
   discussion of prevention. Also triggers on removal audit: "prune my
   instructions", "audit my preferences", "too many rules", "clean up
   instructions", "instructions feel bloated". Do NOT trigger for: skill
-  or knowledge base updates (use utility-skill-publisher), one-time
+  or knowledge base updates (use utility-skill-builder), one-time
   in-session prompts, or in-session corrections not requiring a standing
   rule. Load once per session.
 ---
-SKILL_VERSION: v1.0
+gates_passed: 2026-05-22
+SKILL_VERSION: v1.1
 
 # Instruction Builder — Update and Maintenance Gate
 
@@ -25,7 +26,7 @@ Governs every proposed change to user preferences and project instructions.
 Prevents the additive spiral (T-03) that causes compliance collapse at scale.
 Every update passes all parts before a delivery block is produced.
 
-Type: encoded-preference
+Type: dispatcher
 
 ---
 
@@ -77,7 +78,7 @@ Run first. State destination explicitly before proceeding.
 | Behavioral/format rule for every conversation | User preferences |
 | Behavioral/format rule for one project only | Project instructions |
 | Applies to both | Both — produce separate delivery blocks |
-| Procedure, schema, template, conditional logic, examples | STOP → utility-skill-publisher |
+| Procedure, schema, template, conditional logic, examples | STOP → utility-skill-builder |
 | Reference data, spec, design doc | STOP → knowledge base |
 | One-time in-session instruction | STOP → inline prompt; no standing rule needed |
 | "prune / audit / clean up / too many rules / feel bloated" | REMOVAL AUDIT PATH → run Parts 4, 5, 7 on all existing rules; skip Parts 1–3 |
@@ -104,6 +105,8 @@ Root cause:
   NATURALLY-OCCURRING:   Model produces this naturally; prohibiting rule
                          primes the behavior (load references/instruction-
                          bloat-patterns.md to check against known patterns).
+
+Reference files do not persist across turns — re-view each turn that uses them.
 
 Classification:     [WRONG LAYER / STRUCTURAL / BEHAVIORAL OK /
                      TEMPORAL / NATURALLY-OCCURRING]
@@ -342,8 +345,8 @@ Delivery: complete replacement block with 9 fewer lines, LAST_UPDATE updated.
 ## Out of Scope
 
 This skill does NOT:
-- Update skills or knowledge base documents (use utility-skill-publisher)
-- Diagnose root causes of Claude failures across sessions (use utility-issue-triage)
+- Update skills or knowledge base documents (use utility-skill-builder)
+- Diagnose root causes of Claude failures across sessions (use utility-failure-analyst)
 - Write initial project instructions from scratch (use utility-ops-scaffolder)
 - Govern output format for deliverables (rules live in user prefs; this skill
   ensures they are correctly placed and formatted when added)
@@ -354,8 +357,8 @@ This skill does NOT:
 
 | Skill / Resource | Domain |
 |---|---|
-| utility-skill-publisher | Skill creation and update — different target layer |
-| utility-issue-triage | Diagnosing session failures before deciding to update instructions |
+| utility-skill-builder | Skill creation and update — different target layer |
+| utility-failure-analyst | Diagnosing session failures before deciding to update instructions |
 | utility-ops-scaffolder | Writing initial project instructions from scratch |
 | references/instruction-bloat-patterns.md | Catalog of patterns that fail the 5-test filter — load when BEHAVIORAL ADDITION or NATURALLY-OCCURRING fires |
 | MOSAIC — arXiv 2601.18554 | Constraint count compliance thresholds |

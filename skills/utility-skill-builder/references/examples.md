@@ -46,7 +46,7 @@ Next     adversarial review required to promote to INSTALLED
 
 ## Example 2 — Gate Added to INSTALLED Skill
 
-**Scenario:** Adding Gate 8c (delivery pre-send check) to `utility-skill-publisher`.
+**Scenario:** Adding Gate 8c (delivery pre-send check) to `utility-skill-builder`.
 
 **Gate 0:** New gate being added → SUBSTANTIAL. Research runs: delivery verification patterns in LLM agent workflows.
 
@@ -62,7 +62,7 @@ Next     adversarial review required to promote to INSTALLED
 
 **Gate 9:**
 ```
-utility-skill-publisher  v3.1  INSTALLED  (487 lines)
+utility-skill-builder  v3.1  INSTALLED  (487 lines)
 Changes  1: added Gate 8c — delivery pre-send check
 FixType  BEHAVIORAL ADDITION: confirmed by user on [date]
 Gates    all passed
@@ -181,7 +181,7 @@ Done     written  verified  packaged  registry  present_files
 
 ## Example 7 — Resource Routed to scripts/
 
-**Scenario:** `utility-skill-publisher` body contains 30-line inline bash block for blockquote detection, char counting, and line counting.
+**Scenario:** `utility-skill-builder` body contains 30-line inline bash block for blockquote detection, char counting, and line counting.
 
 **Gate 0.5:** STRUCTURAL FIX — deterministic procedure (no judgment, same logic every time) embedded in body; belongs in `scripts/`.
 
@@ -193,7 +193,7 @@ Done     written  verified  packaged  registry  present_files
 
 **Gate 9:**
 ```
-utility-skill-publisher  v3.0  INSTALLED  (440 lines)
+utility-skill-builder  v3.0  INSTALLED  (440 lines)
 Changes  2: extracted validation logic to scripts/validate.py; replaced 30-line body block with 2-line invocation
 FixType  STRUCTURAL FIX: Gate 2.5 resource placement — deterministic procedure belonged in scripts/
 Gates    all passed

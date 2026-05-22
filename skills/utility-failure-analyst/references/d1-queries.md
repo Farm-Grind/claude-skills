@@ -62,16 +62,6 @@ VALUES (?, ?, ?, ?, ?, ?, ?)
 
 Note: error_log requires schema extension before status/fix_applied fields are available (Design Decision D1 — run ALTER TABLE migration first).
 
-## Skill Registry Verification
-
-```sql
--- All skills
-SELECT skill_name, version, status, notes FROM skill_registry ORDER BY skill_name ASC
-
--- Specific skill
-SELECT skill_name, version, status, notes FROM skill_registry WHERE skill_name = ?
-```
-
 ## Decisions Log Check
 
 ```sql

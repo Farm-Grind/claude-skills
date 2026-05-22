@@ -97,7 +97,7 @@ def check_skill_version(content: str) -> tuple[str, str]:
     return (
         "FAIL",
         "SKILL_VERSION missing — skill has not been through skill-publisher. "
-        "Run utility-skill-publisher and complete Gate 9 before pushing.",
+        "Run utility-skill-builder and complete Gate 9 before pushing.",
     )
 
 
