@@ -172,7 +172,22 @@ is mandatory; SUMMARY appears first, before NEXT):
 **BLOCKS:** [What cannot proceed until this is resolved. Omit if nothing downstream.]
 ```
 
+**RENAME BLOCK slug format rules (read before producing output):**
+- WORKSTREAM portion: kebab-case lowercase only — no uppercase letters, no periods,
+  no embedded version numbers with dots (e.g. `v3.5` → `v35` or omit)
+- `S[N]` is the sprint number token — uppercase S followed by digit(s) is correct
+- TASK_ID follows ticket format (e.g. `OPS-001`, `v2inf-20`) — case per ticket schema
+- The slug line must be plain inline text — no fence characters, no ─── decoration
+- Wrong: `Loop-v3.5-Sprint4 · S6 · OPS-001` (capitalized, dotted version, fenced)
+- Correct: `loop-sprint4 · S6 · OPS-001` (all lowercase workstream, no dots, plain text)
+
 PROJECT mode (full output with rename block):
+
+> ILLUSTRATION — the structure below is the required output format for the handoff block.
+> The RENAME BLOCK header and ─── separator lines are REQUIRED STRUCTURE in the output.
+> The slug line is REQUIRED CONTENT — apply slug format rules above before filling it in.
+> Do not wrap the slug line in backtick fences. Do not copy placeholder brackets literally.
+
 ```
 RENAME BLOCK
 ────────────────────────────────────────
@@ -190,6 +205,10 @@ LAST SYNCED: [tables + datetime]
 ```
 
 GENERAL mode (stored block):
+
+> ILLUSTRATION — same rules apply. RENAME BLOCK header and ─── lines are REQUIRED STRUCTURE.
+> Slug line is REQUIRED CONTENT — apply slug format rules above. Plain text, no fences.
+
 ```
 RENAME BLOCK
 ────────────────────────────────────────
