@@ -335,6 +335,39 @@ def hv_13w_rename_block(block: str) -> list[str]:
                 "add ──────────────────────────────────────── above and below the rename line"
             )
 
+        # (a) Decoration absence: slug line must be plain text — no fence characters,
+        # no ─── decoration embedded within it.
+        if re.search(r'`{3,}|─{4,}', line2):
+            warnings.append(
+                f"  HV-13W    WARN  RENAME BLOCK slug line contains fence or ─── decoration — "
+                f"slug must be plain inline text, no backtick fences, no dashes. "
+                f"Got: \"{line2.strip()[:80]}\""
+            )
+
+        # (b) Slug format: WORKSTREAM portion (before first ·) must be kebab-case
+        # lowercase — no uppercase letters, no embedded periods (version dots).
+        slug_parts = line2.split('·')
+        if slug_parts:
+            workstream_slug = slug_parts[0].strip()
+            slug_errors = []
+            if re.search(r'[A-Z]', workstream_slug):
+                slug_errors.append(
+                    "contains uppercase letters (workstream must be all lowercase, "
+                    "e.g. 'loop-sprint4' not 'Loop-Sprint4')"
+                )
+            if '.' in workstream_slug:
+                slug_errors.append(
+                    "contains periods (version numbers must omit dots, "
+                    "e.g. 'v35' or 'sprint4' not 'v3.5' or 'Sprint4')"
+                )
+            if slug_errors:
+                warnings.append(
+                    f"  HV-13W    WARN  RENAME BLOCK workstream slug malformed: "
+                    f"{'; '.join(slug_errors)}. "
+                    f"Got: \"{workstream_slug}\". "
+                    f"Correct example: \"loop-sprint4 · S6 · OPS-001\""
+                )
+
     return warnings
 
 
