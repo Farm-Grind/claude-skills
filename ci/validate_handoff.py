@@ -277,17 +277,20 @@ def hv_12w_bare_codes(block: str) -> list[str]:
 
 def hv_13w_rename_block(block: str) -> list[str]:
     """
-    HV-13W (WARN — not a FAIL gate): GENERAL mode handoff should include a
-    RENAME BLOCK section before the HANDOFF line. Expected format:
+    HV-13W (WARN — not a FAIL gate): Handoff should include a RENAME BLOCK
+    section. Applies to both GENERAL and PROJECT mode handoffs.
 
-        RENAME BLOCK
-        ────────────────────────────────────────
-        [WORKSTREAM] · [YYYY-MM-DD] · [session topic]
-        ────────────────────────────────────────
+    GENERAL mode: [WORKSTREAM] · [YYYY-MM-DD] · [session topic]
+    PROJECT mode: [WORKSTREAM] · S[N] · [TASK_ID]
+
+    Second-field format detection:
+      - S\\d+ pattern → PROJECT mode (e.g. S10, S4)
+      - \\d{4}-\\d{2}-\\d{2} pattern → GENERAL mode date
+      - Anything else → format error (warn)
 
     Enables chat session findability via recent_chats workstream searches.
     Initial rollout: WARN only. Candidate for FAIL promotion after audit cycle.
-    Addresses: session findability gap (GENERAL mode untitled sessions).
+    Addresses F-086 (schema + validator both wrong on rename block format).
 
     Detection: "RENAME BLOCK" must appear as a standalone line (at start of line,
     not embedded in another field's content) to avoid false positives when
@@ -366,6 +369,19 @@ def hv_13w_rename_block(block: str) -> list[str]:
                     f"{'; '.join(slug_errors)}. "
                     f"Got: \"{workstream_slug}\". "
                     f"Correct example: \"loop-sprint4 · S6 · OPS-001\""
+                )
+
+        # (c) Second-field format: must be S[N] (PROJECT mode) or YYYY-MM-DD (GENERAL mode).
+        # Anything else passes silently — this check closes the gap documented in F-086.
+        if len(slug_parts) >= 2:
+            second_field = slug_parts[1].strip()
+            is_project = bool(re.match(r'^S\d+$', second_field))
+            is_general_date = bool(re.match(r'^\d{4}-\d{2}-\d{2}$', second_field))
+            if not is_project and not is_general_date:
+                warnings.append(
+                    f"  HV-13W    WARN  RENAME BLOCK second field must be S[N] "
+                    f"(PROJECT mode, e.g. 'S10') or YYYY-MM-DD (GENERAL mode) — "
+                    f"got: \"{second_field[:30]}\". (F-086 fix)"
                 )
 
     return warnings

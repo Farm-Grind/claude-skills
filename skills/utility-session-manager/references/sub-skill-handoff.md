@@ -9,7 +9,28 @@ by @monitor when HANDOFF ALERT fires.
 
 ---
 
-## Step 0 — DB and Mode Routing
+## Step 0a — NO_HANDOFF Path
+
+If close signal includes "no handoff" (any of: "no handoff", "close out, no handoff",
+"end session, no handoff", "wrap up, no handoff"):
+
+1. Skip Steps 1–6 entirely — no D1 reads, no writes, no content gates.
+2. Derive rename block fields from session context:
+   - WORKSTREAM: from session_handoff CURRENT row fetched at session start (or session context)
+   - S[N]: session number from same source
+   - TASK_ID: from last active ops_queue item, or omit if none
+3. Produce rename block only (PROJECT mode format):
+
+```
+[WORKSTREAM] · S[N] · [TASK_ID]
+```
+
+No fenced block, no handoff content, no ✓ Stored line. Rename block is the
+entire close output. Stop here — do not continue to Step 0b.
+
+---
+
+## Step 0b — DB and Mode Routing
 
 ```
 IF project_id is set AND session_config exists for project_id:
@@ -84,6 +105,7 @@ For each required field in schema: if empty → ERROR. No write proceeds.
 **Step 2: Run gates (order matters)**
 PROJECT mode: RENAME_BLOCK_GATE → HANDOFF_CONTENT_GATE P1 → write → P2 → P3
 GENERAL mode: RENAME_BLOCK_GATE (WARN) → DB_BLOCK_GATE (WARN) → HANDOFF_CONTENT_GATE P1 → write → P2 → P3
+Note: Step 2 only reached via Step 0b (full handoff path) — Step 0a exits before here.
 
 **Step 3: Read current row + capture version**
 ```sql
@@ -172,22 +194,7 @@ is mandatory; SUMMARY appears first, before NEXT):
 **BLOCKS:** [What cannot proceed until this is resolved. Omit if nothing downstream.]
 ```
 
-**RENAME BLOCK slug format rules (read before producing output):**
-- WORKSTREAM portion: kebab-case lowercase only — no uppercase letters, no periods,
-  no embedded version numbers with dots (e.g. `v3.5` → `v35` or omit)
-- `S[N]` is the sprint number token — uppercase S followed by digit(s) is correct
-- TASK_ID follows ticket format (e.g. `OPS-001`, `v2inf-20`) — case per ticket schema
-- The slug line must be plain inline text — no fence characters, no ─── decoration
-- Wrong: `Loop-v3.5-Sprint4 · S6 · OPS-001` (capitalized, dotted version, fenced)
-- Correct: `loop-sprint4 · S6 · OPS-001` (all lowercase workstream, no dots, plain text)
-
 PROJECT mode (full output with rename block):
-
-> ILLUSTRATION — the structure below is the required output format for the handoff block.
-> The RENAME BLOCK header and ─── separator lines are REQUIRED STRUCTURE in the output.
-> The slug line is REQUIRED CONTENT — apply slug format rules above before filling it in.
-> Do not wrap the slug line in backtick fences. Do not copy placeholder brackets literally.
-
 ```
 RENAME BLOCK
 ────────────────────────────────────────
@@ -205,10 +212,6 @@ LAST SYNCED: [tables + datetime]
 ```
 
 GENERAL mode (stored block):
-
-> ILLUSTRATION — same rules apply. RENAME BLOCK header and ─── lines are REQUIRED STRUCTURE.
-> Slug line is REQUIRED CONTENT — apply slug format rules above. Plain text, no fences.
-
 ```
 RENAME BLOCK
 ────────────────────────────────────────
@@ -240,7 +243,8 @@ OPEN CONTEXT: [constraints or None]
 PROJECT mode:
 - Format: `[WORKSTREAM] · S[N] · [TASK_ID]`
 - All fields from D1 — never inferred from memory
-- Exactly 4 backticks (2 open, 2 close)
+- 2 backtick delimiters (single fenced block — rename section lives inside the handoff block; see Step 7 template)
+- Enforced by: validate_handoff.py HV-13W (WARN; see F-086 — no FAIL gate for PROJECT mode)
 - Failure: HALT
 
 GENERAL mode (HV-13W — warn, not halt):
