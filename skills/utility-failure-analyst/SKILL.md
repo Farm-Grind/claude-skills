@@ -15,8 +15,8 @@ description: >
   lore canon checks; pre-delivery quality gate; real-time session monitoring.
   Load once per session.
 ---
-gates_passed: 2026-05-22
-SKILL_VERSION: v1.7.0
+gates_passed: 2026-05-24
+SKILL_VERSION: v1.8.0
 
 # utility-failure-analyst
 
@@ -206,6 +206,20 @@ ORDER BY finding_id
 ```
 (claude-config D1 — afd78e0e-583e-4e78-87fc-dd6bc8150ce9). All matching findings must be cited and addressed before the proposal proceeds. Absence of query = HARD FAIL.
 Triggered-tool note: if not explicitly invoked, verify signal before proceeding [arxiv 2512.20578].
+**Rule 11 — Skill registry and prior-findings gate.** Before generating any Fix Block that names a specific skill or fix target, two queries are MANDATORY — results must be visible in the same response turn as the Fix Block:
+1. Skill existence check:
+```sql
+SELECT name, status FROM skills WHERE name = '[named skill]'
+```
+(claude-config D1). If no row returns or `status ≠ ACTIVE`: named target is invalid. HARD FAIL — do not propose changes to a non-existent or retired skill. Reclassify fix target before proceeding.
+2. Prior-findings deduplication check:
+```sql
+SELECT finding_id, title, status FROM granular_findings
+WHERE root_cause LIKE '%[pattern keyword]%' OR pattern_code = '[code]'
+ORDER BY finding_id
+```
+(claude-config D1). All matching prior findings must be cited in the Fix Block. If an existing OPEN finding covers the same mechanism: cross-reference it (`"Recurrence of F-XXX"`) rather than inserting a duplicate.
+HARD FAIL: Any Fix Block naming a specific skill target without both query results visible this turn.
 
 ---
 

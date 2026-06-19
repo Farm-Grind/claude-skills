@@ -17,8 +17,8 @@ description: >
   unrelated to skill authoring (game ability design, lore writing, marketing
   copy). Load once per session.
 ---
-gates_passed: 2026-05-22
-SKILL_VERSION: v3.5
+gates_passed: 2026-05-24
+SKILL_VERSION: v3.6
 
 # Skill Publisher — Quality Gate
 
@@ -54,6 +54,7 @@ Failure modes Claude exhibits without this skill. This is why the skill exists.
 12. **Steps marked complete without executing** — gates run but produce no visible output block, or packaging runs but `present_files` is not called in the same response. Both are the same failure mode: step logged as done without the required artifact appearing. Fix: every gate produces a visible named output block; every packaging sequence ends with `present_files` firing in the same turn (see arxiv 2604.20911 in SEE ALSO).
 13. **Resource taxonomy under-considered** — corpus reality: zero skills use `scripts/`, `assets/`, or `evals/`. Some skills encode deterministic procedures as inline bash that belong in `scripts/`; some produce file artifacts that belong in `assets/`. Gate 2.5 forces explicit consideration of all four resource types.
 14. **Generalization failure** — body contains project-specific names. CI (VR-11) warns on this; Gate 5e is the pre-push catch.
+15. **Trigger fires on file path, not task description** — any tool call targeting `/mnt/skills/user/**/*.md` or `cs-work/skills/**/*.md` triggers this skill regardless of task framing. Labels like "scrub mentions", "remove references", or "clean up" are not exemptions. Match the tool-call path, not the task label.
 
 ---
 
@@ -134,7 +135,7 @@ NEXT STEPS — action required before this skill is fully operational:
 
 ## GATE 1 — FULL READ BEFORE ANY EDIT
 
-Read every line of the skill body before any changes. Never from memory or partial read. If the skill was read earlier this session, re-read it — edits invalidate prior reads. Truncated view output must be expanded first.
+Read every line before any changes — never from memory or partial read; re-read if edited this session; truncated output must be expanded; `view_range` calls do NOT satisfy this gate. Required output (HARD FAIL if absent before any edit): `FULL READ: [filename] — [N lines]`
 
 ---
 
